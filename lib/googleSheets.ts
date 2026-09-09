@@ -24,6 +24,14 @@ export interface CallRecord {
   summary: string;
   /** Full verbatim transcript of the call — Column F: Full Transcript */
   transcript: string;
+  /** Caller's academic marks / percentage — Column G: Academic Marks */
+  academicMarks: string;
+  /** Whether the caller requires hostel accommodation — Column H: Hostel Required */
+  hostelRequired: string;
+  /** Caller's current location / city — Column I: Location */
+  location: string;
+  /** Agreed next action / follow-up step — Column J: Next Action */
+  nextAction: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,13 +73,17 @@ function getAuthClient() {
 /**
  * Appends one row to the configured Google Sheet.
  *
- * Column layout (A → F) — must match the sheet header row:
- *   A – Date & Time  (ISO-8601 timestamp)
- *   B – Caller Name  (empty if unknown)
- *   C – Phone Number (E.164 format)
+ * Column layout (A → J) — must match the sheet header row:
+ *   A – Date & Time       (ISO-8601 timestamp)
+ *   B – Caller Name       (empty if unknown)
+ *   C – Phone Number      (E.164 format)
  *   D – Interested Course (extracted from call context)
  *   E – Call Summary
  *   F – Full Transcript
+ *   G – Academic Marks    (e.g. "85%" or "CGPA 8.5")
+ *   H – Hostel Required   (e.g. "Yes" / "No" / "Unknown")
+ *   I – Location          (caller's city or region)
+ *   J – Next Action       (agreed follow-up step)
  *
  * Required env vars (in addition to auth vars above):
  *   GOOGLE_SHEET_ID    – the spreadsheet ID from the Sheet URL
@@ -96,11 +108,12 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
   // If sheetName contains spaces or special chars, single-quote it.
   // The tab name must EXACTLY match what exists in the spreadsheet.
   const escapedName = sheetName.replace(/'/g, "\\'");
-  const range = `'${escapedName}'!A:F`;
+  const range = `'${escapedName}'!A:J`;
 
-  // Values must be in the same order as the sheet columns (A → F):
-  // A: Date & Time | B: Caller Name | C: Phone Number
-  // D: Interested Course | E: Call Summary | F: Full Transcript
+  // Values must be in the same order as the sheet columns (A → J):
+  // A: Date & Time | B: Caller Name  | C: Phone Number    | D: Interested Course
+  // E: Call Summary | F: Full Transcript | G: Academic Marks
+  // H: Hostel Required | I: Location | J: Next Action
   const values: string[][] = [
     [
       record.timestamp,
@@ -109,6 +122,10 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
       record.interestedCourse,
       record.summary,
       record.transcript,
+      record.academicMarks,
+      record.hostelRequired,
+      record.location,
+      record.nextAction,
     ],
   ];
 

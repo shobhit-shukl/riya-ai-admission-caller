@@ -17,6 +17,10 @@ export async function GET(): Promise<NextResponse> {
       interestedCourse: "BBA",
       summary: "✅ TEST ROW — connection verified successfully.",
       transcript: "This is a test entry created by the /api/test-sheets health check.",
+      academicMarks: "N/A",
+      hostelRequired: "N/A",
+      location: "N/A",
+      nextAction: "N/A",
     });
 
     return NextResponse.json(

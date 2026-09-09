@@ -79,10 +79,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Expand this logic as needed for your use case.
     const interestedCourse: string = "";
 
+    // Extract additional structured fields from the summary/transcript.
+    // Replace these empty strings with real parsing logic as needed.
+    const academicMarks: string = "";
+    const hostelRequired: string = "";
+    const location: string = "";
+    const nextAction: string = "";
+
     const timestamp: string = new Date().toISOString();
 
     // 4. Append the record to Google Sheets.
-    await appendCallRecord({ timestamp, callerName, callerNumber, interestedCourse, summary, transcript });
+    await appendCallRecord({
+      timestamp,
+      callerName,
+      callerNumber,
+      interestedCourse,
+      summary,
+      transcript,
+      academicMarks,
+      hostelRequired,
+      location,
+      nextAction,
+    });
 
     console.log(
       `[vapi-webhook] Row appended — caller: ${callerNumber}, at: ${timestamp}`
