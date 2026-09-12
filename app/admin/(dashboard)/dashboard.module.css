@@ -1,0 +1,307 @@
+.shell {
+  --surface: #ffffff;
+  --surface-muted: #f6f5fb;
+  --border: #e7e6f0;
+  --text: #131217;
+  --text-muted: #5c5a6b;
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-contrast: #ffffff;
+  --accent-2: #d6409f;
+  --accent-2-soft: rgba(214, 64, 159, 0.12);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.1);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --tile-indigo: #4f46e5;
+  --tile-indigo-soft: rgba(79, 70, 229, 0.12);
+  --tile-teal: #0d9488;
+  --tile-teal-soft: rgba(13, 148, 136, 0.12);
+  --tile-amber: #d97706;
+  --tile-amber-soft: rgba(217, 119, 6, 0.12);
+  --tile-rose: #e11d48;
+  --tile-rose-soft: rgba(225, 29, 72, 0.12);
+  --shadow: 0 12px 24px -16px rgba(16, 16, 20, 0.25);
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--font-geist-sans);
+  background: var(--surface-muted);
+}
+
+@media (min-width: 840px) {
+  .shell {
+    flex-direction: row;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .shell {
+    --surface: #131218;
+    --surface-muted: #0a0a10;
+    --border: #29283a;
+    --text: #f4f4f6;
+    --text-muted: #a5a3b8;
+    --accent: #818cf8;
+    --accent-strong: #a5b4fc;
+    --accent-soft: rgba(129, 140, 248, 0.16);
+    --accent-contrast: #101014;
+    --accent-2: #f472c9;
+    --accent-2-soft: rgba(244, 114, 201, 0.14);
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.12);
+    --danger: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --tile-indigo: #818cf8;
+    --tile-indigo-soft: rgba(129, 140, 248, 0.16);
+    --tile-teal: #2dd4bf;
+    --tile-teal-soft: rgba(45, 212, 191, 0.14);
+    --tile-amber: #fbbf24;
+    --tile-amber-soft: rgba(251, 191, 36, 0.14);
+    --tile-rose: #fb7185;
+    --tile-rose-soft: rgba(251, 113, 133, 0.14);
+    --shadow: 0 16px 32px -18px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes dashboardFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sidebar                                                                 */
+/* ---------------------------------------------------------------------- */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 220px;
+  flex-shrink: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 16px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (min-width: 840px) {
+  .sidebar {
+    display: flex;
+  }
+}
+
+.sidebarTop {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.logoDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.navLink:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+  transform: translateX(2px);
+}
+
+.navLinkActive {
+  background: linear-gradient(90deg, var(--accent-soft), transparent);
+  color: var(--accent-strong);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.navLinkActive:hover {
+  transform: none;
+}
+
+.sidebarBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adminEmail {
+  padding: 0 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.logoutButton:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Mobile top bar (shown below the sidebar's breakpoint)                  */
+/* ---------------------------------------------------------------------- */
+
+.mobileTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (min-width: 840px) {
+  .mobileTopBar {
+    display: none;
+  }
+}
+
+.mobileNav {
+  display: flex;
+  gap: 6px;
+}
+
+.mobileNavLink {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.mobileNavLinkActive {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-strong);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Content area                                                           */
+/* ---------------------------------------------------------------------- */
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: clamp(20px, 4vw, 40px);
+  animation: dashboardFadeInUp 0.4s ease both;
+}
+
+.pageHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.pageHeading h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.pageHeading p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Skeleton loading (used by loading.tsx route segments)                  */
+/* ---------------------------------------------------------------------- */
+
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    100deg,
+    var(--surface-muted) 40%,
+    var(--border) 50%,
+    var(--surface-muted) 60%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonCard {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--surface-muted);
+  }
+}

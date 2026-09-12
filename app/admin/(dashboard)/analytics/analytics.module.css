@@ -1,0 +1,404 @@
+.statGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-bottom: 20px;
+}
+
+.statTile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  opacity: 0;
+  animation: statTileIn 0.45s ease both;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statTile:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.statTile:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.statTile:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.statTile:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+@keyframes statTileIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .statTile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+}
+
+.statIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.statIconIndigo {
+  background: var(--tile-indigo-soft);
+  color: var(--tile-indigo);
+}
+
+.statIconTeal {
+  background: var(--tile-teal-soft);
+  color: var(--tile-teal);
+}
+
+.statIconAmber {
+  background: var(--tile-amber-soft);
+  color: var(--tile-amber);
+}
+
+.statIconRose {
+  background: var(--tile-rose-soft);
+  color: var(--tile-rose);
+}
+
+.statLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.statValue {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  font-variant-numeric: proportional-nums;
+}
+
+.panelGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-bottom: 16px;
+}
+
+.panel {
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 16px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .panel:hover {
+    border-color: transparent;
+    box-shadow: var(--shadow);
+  }
+}
+
+.panelGrid > .panel {
+  margin-bottom: 0;
+}
+
+.panel h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.emptyState {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Horizontal bar list                                                     */
+/* ---------------------------------------------------------------------- */
+
+.barList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(0, 96px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.barLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  min-width: 3px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  width: var(--bar-width, 0%);
+  animation: growWidth 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes growWidth {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--bar-width, 0%);
+  }
+}
+
+.barValue {
+  min-width: 20px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 7-day trend columns                                                     */
+/* ---------------------------------------------------------------------- */
+
+.trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+}
+
+.trendColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.trendValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.trendTrack {
+  flex: 1;
+  width: 100%;
+  max-width: 28px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--surface-muted);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.trendFill {
+  width: 100%;
+  min-height: 0;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  height: var(--trend-height, 0%);
+  animation: growHeight 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes growHeight {
+  from {
+    height: 0%;
+  }
+  to {
+    height: var(--trend-height, 0%);
+  }
+}
+
+.trendLabel {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Recent leads list                                                       */
+/* ---------------------------------------------------------------------- */
+
+.recentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.recentHeader h2 {
+  margin-bottom: 0;
+}
+
+.viewAllLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  color: inherit;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .recentRow:hover {
+    background: var(--surface-muted);
+    transform: translateX(2px);
+  }
+}
+
+.recentName {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.recentMeta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.recentDate {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statTile {
+    opacity: 1;
+    animation: none;
+  }
+
+  .barFill {
+    width: var(--bar-width, 0%);
+    animation: none;
+  }
+
+  .trendFill {
+    height: var(--trend-height, 0%);
+    animation: none;
+  }
+
+  .recentRow:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Loading skeleton                                                        */
+/* ---------------------------------------------------------------------- */
+
+.skeletonTitle {
+  width: 140px;
+  height: 22px;
+}
+
+.skeletonSubtitle {
+  width: 220px;
+  height: 14px;
+  margin-top: 4px;
+}
+
+.skeletonStatRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.skeletonIcon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.skeletonStatText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.skeletonLabel {
+  width: 70%;
+  height: 12px;
+}
+
+.skeletonValue {
+  width: 50%;
+  height: 22px;
+}
+
+.skeletonPanelHeading {
+  width: 160px;
+  height: 15px;
+  margin-bottom: 18px;
+}
+
+.skeletonBarList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeletonBarRow {
+  height: 10px;
+}
+
+.skeletonRecentRow {
+  height: 40px;
+  margin-top: 10px;
+}

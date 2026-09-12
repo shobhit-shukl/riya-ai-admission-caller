@@ -1,0 +1,357 @@
+.emptyState {
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Table                                                                   */
+/* ---------------------------------------------------------------------- */
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.table thead th {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--border);
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.row:hover {
+  background: var(--surface-muted);
+}
+
+.row:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Pagination                                                              */
+/* ---------------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pageLink {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pageLink:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pageLinkDisabled {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.pageStatus {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modal                                                                    */
+/* ---------------------------------------------------------------------- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+  background: rgba(10, 10, 12, 0.5);
+  animation: overlayIn 0.2s ease both;
+}
+
+.modal {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.4);
+  animation: modalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modal {
+    animation: none;
+  }
+}
+
+.modalToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modalFullPageLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.modalClose {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.modalClose:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Lead detail (shared by modal + standalone page)                        */
+/* ---------------------------------------------------------------------- */
+
+.backLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.standaloneDetail {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  max-width: 720px;
+}
+
+.detail {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detailName {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.detailSubtitle {
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.detailTimestamp {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.detailGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fieldLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.fieldValue {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.detailSummary {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.detailTranscript {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  font-family: var(--font-geist-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Loading skeleton                                                        */
+/* ---------------------------------------------------------------------- */
+
+.skeletonTitle {
+  width: 100px;
+  height: 22px;
+}
+
+.skeletonSubtitle {
+  width: 200px;
+  height: 14px;
+  margin-top: 4px;
+}
+
+.skeletonCell {
+  height: 13px;
+}
+
+.skeletonPagerButton {
+  width: 96px;
+  height: 34px;
+  border-radius: 999px;
+}
+
+.skeletonPagerStatus {
+  width: 90px;
+  height: 13px;
+}
+
+.skeletonBackLink {
+  width: 110px;
+  height: 14px;
+}
+
+.skeletonName {
+  width: 160px;
+  height: 18px;
+}
+
+.skeletonSubtitleSmall {
+  width: 130px;
+  height: 13px;
+  margin-top: 8px;
+}
+
+.skeletonTimestamp {
+  width: 110px;
+  height: 12px;
+}
+
+.skeletonFieldLabel {
+  width: 90px;
+  height: 10px;
+}
+
+.skeletonFieldValue {
+  width: 70%;
+  height: 14px;
+  margin-top: 6px;
+}
+
+.skeletonSummaryLine {
+  width: 100%;
+  height: 13px;
+  margin-top: 10px;
+}
+
+.skeletonSummaryLineShort {
+  width: 60%;
+  height: 13px;
+  margin-top: 8px;
+}
+
+.skeletonTranscript {
+  width: 100%;
+  height: 140px;
+  margin-top: 10px;
+}
