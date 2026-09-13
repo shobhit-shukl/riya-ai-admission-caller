@@ -1,37 +1,28 @@
 /**
  * app/api/test-mongodb/route.ts
  *
- * Quick connectivity test — inserts a test call record into MongoDB
- * and returns success/failure. DELETE this route before going to production.
+ * Quick connectivity test — pings the database and returns success/failure.
+ * Deliberately does NOT write any document: this endpoint is public and
+ * unauthenticated, so anything it inserted (a bot or crawler hitting it,
+ * or just repeated manual checks) would otherwise show up as a fake lead
+ * on the admin dashboard.
  */
 
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import CallRecordModel from "@/models/CallRecord";
 
 export async function GET(): Promise<NextResponse> {
   try {
-    await connectToDatabase();
+    const conn = await connectToDatabase();
 
-    const doc = await CallRecordModel.create({
-      timestamp: new Date(),
-      callerName: "Test User",
-      callerNumber: "+10000000000",
-      interestedCourse: "BBA",
-      summary: "✅ TEST ROW — connection verified successfully.",
-      transcript: "This is a test entry created by the /api/test-mongodb health check.",
-      academicMarks: "N/A",
-      hostelRequired: "N/A",
-      location: "N/A",
-      nextAction: "N/A",
-    });
+    if (!conn.connection.db) {
+      throw new Error("Connected, but no database handle is available.");
+    }
+
+    await conn.connection.db.admin().ping();
 
     return NextResponse.json(
-      {
-        success: true,
-        message: "✅ Test document inserted into MongoDB successfully!",
-        id: doc._id,
-      },
+      { success: true, message: "✅ MongoDB connection verified successfully." },
       { status: 200 }
     );
   } catch (error: unknown) {

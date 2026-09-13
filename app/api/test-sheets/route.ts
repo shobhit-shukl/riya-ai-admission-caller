@@ -1,30 +1,21 @@
 /**
  * app/api/test-sheets/route.ts
  *
- * Quick connectivity test — appends a test row to the Google Sheet
- * and returns success/failure. DELETE this route before going to production.
+ * Quick connectivity test — verifies the service account can reach the
+ * configured spreadsheet, without appending any row. Deliberately avoids
+ * writing: this endpoint is public and unauthenticated, so anything it
+ * inserted would show up as a fake lead in the sheet.
  */
 
 import { NextResponse } from "next/server";
-import { appendCallRecord } from "@/lib/googleSheets";
+import { verifySheetAccess } from "@/lib/googleSheets";
 
 export async function GET(): Promise<NextResponse> {
   try {
-    await appendCallRecord({
-      timestamp: new Date().toISOString(),
-      callerName: "Test User",
-      callerNumber: "+10000000000",
-      interestedCourse: "BBA",
-      summary: "✅ TEST ROW — connection verified successfully.",
-      transcript: "This is a test entry created by the /api/test-sheets health check.",
-      academicMarks: "N/A",
-      hostelRequired: "N/A",
-      location: "N/A",
-      nextAction: "N/A",
-    });
+    const { title } = await verifySheetAccess();
 
     return NextResponse.json(
-      { success: true, message: "✅ Test row appended to Google Sheet successfully!" },
+      { success: true, message: `✅ Google Sheets connection verified successfully (${title}).` },
       { status: 200 }
     );
   } catch (error: unknown) {

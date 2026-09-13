@@ -137,3 +137,26 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
     requestBody: { values },
   });
 }
+
+/**
+ * Verifies the service account can reach the configured spreadsheet,
+ * without writing any data — used by the /api/test-sheets health check so
+ * it doesn't leave a fake row behind every time it's hit.
+ */
+export async function verifySheetAccess(): Promise<{ title: string }> {
+  const sheetId = process.env.GOOGLE_SHEET_ID;
+
+  if (!sheetId) {
+    throw new Error("Missing GOOGLE_SHEET_ID environment variable.");
+  }
+
+  const auth = getAuthClient();
+  const sheetsClient: sheets_v4.Sheets = google.sheets({ version: "v4", auth });
+
+  const { data } = await sheetsClient.spreadsheets.get({
+    spreadsheetId: sheetId,
+    fields: "properties.title",
+  });
+
+  return { title: data.properties?.title ?? "Untitled spreadsheet" };
+}
