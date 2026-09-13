@@ -33,15 +33,18 @@ const RESPONSE_SCHEMA = {
   properties: {
     callerName: {
       type: "STRING",
-      description: "The caller's name if they mentioned it, otherwise an empty string.",
+      description:
+        "The caller's name if they mentioned it in any language (e.g. \"मेरा नाम राहुल है\" / \"my name is Rahul\"), transliterated to Roman script. Otherwise an empty string.",
     },
     interestedCourse: {
       type: "STRING",
-      description: "The course or program the caller asked about, otherwise an empty string.",
+      description:
+        "The course or program the caller asked about, in Roman script (e.g. Hindi \"बीटेक\" -> \"B.Tech\"), otherwise an empty string.",
     },
     academicMarks: {
       type: "STRING",
-      description: "The caller's academic marks/percentage/CGPA if mentioned, otherwise an empty string.",
+      description:
+        "The caller's academic marks/percentage/CGPA if mentioned, converting spoken-out numbers in any language to digits (e.g. \"पचहत्तर प्रतिशत\" -> \"75%\"), otherwise an empty string.",
     },
     hostelRequired: {
       type: "STRING",
@@ -50,7 +53,8 @@ const RESPONSE_SCHEMA = {
     },
     location: {
       type: "STRING",
-      description: "The caller's current city/location if mentioned, otherwise an empty string.",
+      description:
+        "The caller's current city/location if mentioned in any language (e.g. \"मैं पुणे से हूं\" / \"I'm from Pune\"), transliterated to Roman script. Otherwise an empty string.",
     },
     nextAction: {
       type: "STRING",
@@ -58,7 +62,7 @@ const RESPONSE_SCHEMA = {
     },
     summary: {
       type: "STRING",
-      description: "A one to two sentence summary of the call.",
+      description: "A one to two sentence summary of the call, written in English regardless of the call's language.",
     },
   },
   required: [
@@ -88,7 +92,11 @@ export async function extractCallData(
   }
 
   const modelName = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
-  const prompt = `You are reading a transcript of a phone call between an AI admissions counselor ("AI"/"Riya") and a prospective student ("User"). Read the call summary and transcript below and extract the requested fields. Use an empty string for any field with no information available in the call, except hostelRequired which must always be "Yes", "No", or "Unknown".
+  const prompt = `You are reading a transcript of a phone call between an AI admissions counselor ("AI"/"Riya") and a prospective student ("User"). Read the call summary and transcript below and extract the requested fields.
+
+The transcript may be in Hindi (Devanagari script), English, romanized Hindi, or a mix of these switching mid-sentence — this is normal for Indian admissions calls. Understand all of them. Whatever field values you extract (name, location, course, etc.), write them out in Roman script / English so they're consistent and readable in a spreadsheet, even if the caller said them in Hindi. Convert spoken-out numbers and Hindi number words to digits (e.g. "पचहत्तर प्रतिशत" or "pachattar percent" -> "75%").
+
+Use an empty string for any field with no information available in the call, except hostelRequired which must always be "Yes", "No", or "Unknown".
 
 Existing call summary (may be empty): ${existingSummary}
 
