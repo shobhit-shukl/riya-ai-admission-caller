@@ -87,7 +87,7 @@ export async function extractCallData(
     return EMPTY_EXTRACTION;
   }
 
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
   const prompt = `You are reading a transcript of a phone call between an AI admissions counselor ("AI"/"Riya") and a prospective student ("User"). Read the call summary and transcript below and extract the requested fields. Use an empty string for any field with no information available in the call, except hostelRequired which must always be "Yes", "No", or "Unknown".
 
 Existing call summary (may be empty): ${existingSummary}
