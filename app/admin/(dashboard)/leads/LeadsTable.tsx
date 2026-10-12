@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LeadDetail as LeadDetailData } from "@/lib/leads";
+import { formatInAppTimeZone } from "@/lib/time";
 import LeadDetail from "./LeadDetail";
 import styles from "./leads.module.css";
 
 function formatShortDate(iso: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString(undefined, {
+  return formatInAppTimeZone(iso, {
     month: "short",
     day: "numeric",
     hour: "numeric",

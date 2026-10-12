@@ -12,6 +12,9 @@ const AdminSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     name: { type: String, default: "" },
+    // Brute-force protection — see app/api/admin/login/route.ts.
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
   },
   { timestamps: true }
 );

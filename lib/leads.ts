@@ -8,6 +8,7 @@
 
 import { connectToDatabase } from "@/lib/mongodb";
 import CallRecordModel from "@/models/CallRecord";
+import { APP_TIME_ZONE, appDayKey, startOfAppDay } from "@/lib/time";
 
 export const LEADS_PAGE_SIZE = 10;
 
@@ -155,20 +156,16 @@ export interface LeadsAnalytics {
 export async function getLeadsAnalytics(): Promise<LeadsAnalytics> {
   await connectToDatabase();
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const startOfToday = startOfAppDay(0);
+  const sevenDaysAgo = startOfAppDay(6);
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-
-  const [totalLeads, leadsToday, topCourses, hostelBreakdown, topLocations, trendDocs, recentDocs] =
+  const [totalLeads, leadsToday, topCourses, hostelBreakdown, allLocations, trendDocs, recentDocs] =
     await Promise.all([
       CallRecordModel.countDocuments(),
       CallRecordModel.countDocuments({ timestamp: { $gte: startOfToday } }),
       groupByField("interestedCourse", 6),
       groupByField("hostelRequired"),
-      groupByField("location", 6),
+      groupByField("location"),
       CallRecordModel.find({ timestamp: { $gte: sevenDaysAgo } })
         .select("timestamp")
         .lean() as unknown as Promise<{ timestamp: Date }[]>,
@@ -176,23 +173,23 @@ export async function getLeadsAnalytics(): Promise<LeadsAnalytics> {
     ]);
 
   const hostelYesCount = hostelBreakdown.find((entry) => entry.label === "Yes")?.count ?? 0;
-  const distinctLocationCount = topLocations.filter((entry) => entry.label !== "Unknown").length;
+  const distinctLocationCount = allLocations.filter((entry) => entry.label !== "Unknown").length;
+  const topLocations = allLocations.slice(0, 6);
 
-  // Bucket the last 7 days by local date so days with zero leads still show up.
+  // Bucket the last 7 days by IST date so days with zero leads still show up.
   const countsByDay = new Map<string, number>();
   for (const doc of trendDocs) {
-    const key = new Date(doc.timestamp).toISOString().slice(0, 10);
+    const key = appDayKey(new Date(doc.timestamp));
     countsByDay.set(key, (countsByDay.get(key) ?? 0) + 1);
   }
 
   const dailyTrend: Bucket[] = [];
   for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const key = date.toISOString().slice(0, 10);
+    // Midday of that IST day, so the key and weekday label can't straddle midnight.
+    const date = new Date(startOfAppDay(i).getTime() + 12 * 60 * 60 * 1000);
     dailyTrend.push({
-      label: date.toLocaleDateString(undefined, { weekday: "short" }),
-      count: countsByDay.get(key) ?? 0,
+      label: date.toLocaleDateString("en-IN", { weekday: "short", timeZone: APP_TIME_ZONE }),
+      count: countsByDay.get(appDayKey(date)) ?? 0,
     });
   }
 

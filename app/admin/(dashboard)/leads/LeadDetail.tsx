@@ -1,11 +1,9 @@
 import type { LeadDetail as LeadDetailData } from "@/lib/leads";
+import { formatInAppTimeZone } from "@/lib/time";
 import styles from "./leads.module.css";
 
 function formatDateTime(iso: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString(undefined, {
+  return formatInAppTimeZone(iso, {
     dateStyle: "medium",
     timeStyle: "short",
   });

@@ -6,6 +6,17 @@
  */
 
 import { google, sheets_v4 } from "googleapis";
+import { formatInAppTimeZone } from "@/lib/time";
+
+// Google Sheets rejects the whole append if any cell exceeds 50,000
+// characters, which a long call's transcript can. The full transcript is
+// always kept in MongoDB; the sheet gets a truncated copy.
+const MAX_CELL_CHARS = 49_000;
+
+function truncateForCell(value: string): string {
+  if (value.length <= MAX_CELL_CHARS) return value;
+  return value.slice(0, MAX_CELL_CHARS) + "\n…[truncated — full transcript in the admin dashboard]";
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,12 +127,12 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
   // H: Hostel Required | I: Location | J: Next Action
   const values: string[][] = [
     [
-      record.timestamp,
+      formatInAppTimeZone(record.timestamp, { dateStyle: "medium", timeStyle: "short" }),
       record.callerName,
       record.callerNumber,
       record.interestedCourse,
       record.summary,
-      record.transcript,
+      truncateForCell(record.transcript),
       record.academicMarks,
       record.hostelRequired,
       record.location,
@@ -132,7 +143,10 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
   await sheetsClient.spreadsheets.values.append({
     spreadsheetId: sheetId,
     range,
-    valueInputOption: "USER_ENTERED",
+    // RAW, not USER_ENTERED: these values come from callers and an LLM, so
+    // anything starting with "=" must stay text rather than run as a formula,
+    // and "+91…" numbers must not be parsed into plain numbers.
+    valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values },
   });

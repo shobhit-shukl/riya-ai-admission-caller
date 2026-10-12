@@ -50,6 +50,8 @@ const AdminSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     name: { type: String, default: "" },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
   },
   { timestamps: true }
 );
@@ -98,7 +100,8 @@ async function main() {
 
   const admin = await Admin.findOneAndUpdate(
     { email: normalizedEmail },
-    { email: normalizedEmail, passwordHash, name: name ?? "" },
+    // Resetting the password also clears any login lockout.
+    { email: normalizedEmail, passwordHash, name: name ?? "", failedLoginAttempts: 0, $unset: { lockUntil: 1 } },
     { upsert: true, returnDocument: "after" }
   );
 

@@ -2,12 +2,18 @@
  * app/api/test-gemini/route.ts
  *
  * Quick connectivity test — confirms GEMINI_API_KEY is configured and
- * valid by sending a trivial, minimal-token prompt. Writes no lead data.
+ * valid by sending a trivial, minimal-token prompt. Admin-only; writes no lead data.
  */
 
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/auth";
 
 export async function GET(): Promise<NextResponse> {
+  // Admin-only: the error messages below reveal infrastructure details.
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ success: false, error: "Unauthorized." }, { status: 401 });
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -20,10 +26,10 @@ export async function GET(): Promise<NextResponse> {
   try {
     const modelName = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: "Reply with the single word: ok" }] }],
         }),

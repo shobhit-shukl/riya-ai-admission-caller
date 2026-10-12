@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { getLeadsAnalytics } from "@/lib/leads";
+import { formatInAppTimeZone } from "@/lib/time";
 import dashboardStyles from "../dashboard.module.css";
 import styles from "./analytics.module.css";
 
@@ -189,7 +190,7 @@ export default async function AnalyticsPage() {
                   </span>
                 </div>
                 <span className={styles.recentDate}>
-                  {new Date(lead.timestamp).toLocaleString(undefined, {
+                  {formatInAppTimeZone(lead.timestamp, {
                     month: "short",
                     day: "numeric",
                     hour: "numeric",

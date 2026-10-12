@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Riya — AI Admission Caller
 
-## Getting Started
+Riya is an AI voice admissions counselor. She talks to prospective students on the phone (in Hindi, English or Hinglish), and after each call this app:
 
-First, run the development server:
+1. receives Vapi's end-of-call report on `/api/vapi-webhook`,
+2. extracts the lead's details (name, course, marks, hostel, city, next step) with Gemini,
+3. saves the lead to MongoDB and appends it to a Google Sheet,
+4. shows every lead, with the full transcript and analytics, in the admin dashboard at `/admin`.
+
+Riya's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
+
+## Stack
+
+Next.js 16 (App Router) · MongoDB (Mongoose) · Google Sheets API · Gemini API · Vapi
+
+## Local setup
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill in the values
+npm run create-admin -- admin@example.com 'a-strong-password' "Admin Name"
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000/admin and log in.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without `VAPI_WEBHOOK_SECRET`, the webhook accepts unauthenticated requests **in development only**, so you can test it with curl.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploying to production
 
-## Learn More
+1. **Set every variable from `.env.example`** in your host (e.g. Vercel). `VAPI_WEBHOOK_SECRET` is required: in production the webhook rejects all requests without it.
+2. **Point Vapi at the webhook.** In the Vapi assistant, set the Server URL to `https://<your-domain>/api/vapi-webhook` and set the same secret as `VAPI_WEBHOOK_SECRET` (as the server secret, or as a Bearer-token credential).
+3. **Share the Google Sheet** with `GOOGLE_SERVICE_ACCOUNT_EMAIL` as an Editor, and make sure the tab named in `GOOGLE_SHEET_NAME` exists.
+4. **Create admin accounts** with `npm run create-admin` (pointed at the production `MONGODB_URI`). There is no public sign-up. Running it again for an existing email resets the password and clears any login lockout.
+5. **Check the connections** while logged in as an admin: `/api/test-mongodb`, `/api/test-sheets`, `/api/test-gemini`.
+6. **Make a test call** and confirm the lead appears in both the dashboard and the sheet.
 
-To learn more about Next.js, take a look at the following resources:
+## How it behaves in production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Webhook auth.** Requests must carry the shared secret (`x-vapi-secret` header or `Authorization: Bearer`).
+- **Fast acknowledgement.** The webhook replies to Vapi immediately and processes the call afterwards (`after()`), so slow Gemini/Sheets calls never cause Vapi timeouts and retries.
+- **No duplicate leads.** Each Vapi call ID is stored once (unique index); a re-delivered webhook is skipped.
+- **Failure isolation.** If MongoDB is down, the lead still goes to the sheet; if Sheets fails, it's still in MongoDB. If Gemini fails or times out (10 s), the raw transcript is still saved.
+- **Sheets.** Values are written as plain text (no formula execution), times are in IST, and very long transcripts are truncated in the sheet only. The full transcript is always in the dashboard.
+- **Admin login.** After 5 wrong passwords an account is locked for 15 minutes.
+- **Time zone.** "Today", the 7-day trend and all displayed times use IST (`lib/time.ts`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm run lint` | ESLint |
+| `npm run create-admin -- <email> <password> ["Name"]` | Create an admin or reset their password |

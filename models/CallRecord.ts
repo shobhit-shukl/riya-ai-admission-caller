@@ -12,7 +12,7 @@ import { Schema, model, models } from "mongoose";
 
 const CallRecordSchema = new Schema(
   {
-    callId: { type: String, index: true },
+    callId: { type: String },
     timestamp: { type: Date, required: true },
     callerName: { type: String, default: "" },
     callerNumber: { type: String, default: "", index: true },
@@ -30,6 +30,16 @@ const CallRecordSchema = new Schema(
     rawAnalysis: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
+);
+
+// One document per Vapi call: Vapi re-sends a webhook it thinks failed, and
+// the webhook relies on this index to recognise and skip those duplicates.
+// Partial so older records without a callId don't collide with each other.
+// Named explicitly because an older, non-unique `callId_1` index may already
+// exist in the database with the same key.
+CallRecordSchema.index(
+  { callId: 1 },
+  { name: "callId_unique", unique: true, partialFilterExpression: { callId: { $type: "string" } } }
 );
 
 // Reuse the compiled model across hot reloads / serverless invocations

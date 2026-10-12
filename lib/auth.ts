@@ -7,6 +7,7 @@
  */
 
 import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
 export const ADMIN_SESSION_COOKIE = "admin_session";
 export const ADMIN_SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -32,6 +33,12 @@ export async function createSessionToken(payload: AdminSessionPayload): Promise<
     .setIssuedAt()
     .setExpirationTime(`${ADMIN_SESSION_DURATION_SECONDS}s`)
     .sign(getSecretKey());
+}
+
+/** Reads and verifies the admin session cookie on the current request. */
+export async function getAdminSession(): Promise<AdminSessionPayload | null> {
+  const cookieStore = await cookies();
+  return verifySessionToken(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
 }
 
 /** Returns the decoded session payload, or null if the token is missing/invalid/expired. */
