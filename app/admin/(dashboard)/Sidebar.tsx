@@ -7,6 +7,7 @@ import styles from "./dashboard.module.css";
 const NAV_ITEMS = [
   { href: "/admin/analytics", label: "Analytics", icon: <AnalyticsIcon /> },
   { href: "/admin/leads", label: "Leads", icon: <LeadsIcon /> },
+  { href: "/admin/contacts", label: "Call list", icon: <CallListIcon /> },
 ];
 
 export default function Sidebar({ adminEmail }: { adminEmail: string }) {
@@ -94,6 +95,14 @@ function LeadsIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
       <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-3.6 0-8 1.8-8 4.5V21h16v-2.5c0-2.7-4.4-4.5-8-4.5Z" />
+    </svg>
+  );
+}
+
+function CallListIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+      <path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1L6.6 10.8Z" />
     </svg>
   );
 }

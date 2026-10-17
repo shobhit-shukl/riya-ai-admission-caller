@@ -1,0 +1,105 @@
+.notice {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--tile-amber-soft);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Upload                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.uploadCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.uploadRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.fileInput {
+  flex: 1 1 240px;
+  max-width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.fileInput::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.templateLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skippedList {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Row actions                                                             */
+/* ---------------------------------------------------------------------- */
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.callButton {
+  padding: 6px 14px;
+}
+
+.callButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.removeButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.removeButton:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
