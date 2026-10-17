@@ -1,7 +1,10 @@
 import type { LeadCall, LeadDetail as LeadDetailData } from "@/lib/leads";
 import { LEAD_STATUSES, LEAD_STATUS_LABELS } from "@/lib/leadPipeline";
+import { MAX_CALLBACK_ATTEMPTS } from "@/lib/callbacks";
+import { isOutboundCallingConfigured, toE164 } from "@/lib/outboundCalls";
 import { appDayKey, formatInAppTimeZone } from "@/lib/time";
 import { addLeadNote, updateLeadPipeline } from "./actions";
+import CallNowButton from "./CallNowButton";
 import { StatusBadge, TemperatureBadge } from "./LeadBadges";
 import styles from "./leads.module.css";
 
@@ -17,6 +20,19 @@ function formatDuration(call: LeadCall): string {
   const seconds = Math.round((new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()) / 1000);
   if (!Number.isFinite(seconds) || seconds < 0) return "";
   return seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`;
+}
+
+const DIRECTION_LABELS: Record<string, string> = {
+  inbound: "Inbound",
+  outbound: "Callback",
+  web: "Web call",
+};
+
+function callNowDisabledReason(lead: LeadDetailData): string | null {
+  if (!isOutboundCallingConfigured()) return "Callbacks aren't set up yet (see README → Outbound callbacks).";
+  if (lead.doNotCall) return "Marked \"Do not call\".";
+  if (!toE164(lead.callerNumber)) return "No callable phone number on this lead.";
+  return null;
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -50,7 +66,7 @@ export default function LeadDetail({ lead }: { lead: LeadDetailData }) {
       {/* Keyed on the saved values: React resets a form after its action runs,
           and a <select> would otherwise snap back to the value it first mounted with. */}
       <form
-        key={`${lead.status}|${followUpValue}`}
+        key={`${lead.status}|${followUpValue}|${lead.doNotCall}`}
         action={updateLeadPipeline}
         className={styles.pipelineForm}
       >
@@ -69,10 +85,27 @@ export default function LeadDetail({ lead }: { lead: LeadDetailData }) {
           <span className={styles.fieldLabel}>Follow-up date</span>
           <input type="date" name="followUpDate" defaultValue={followUpValue} className={styles.input} />
         </label>
+        <label className={styles.filterCheckbox}>
+          <input type="checkbox" name="doNotCall" defaultChecked={lead.doNotCall} />
+          Do not call
+        </label>
         <button type="submit" className={styles.primaryButton}>
           Save
         </button>
       </form>
+
+      <div className={styles.callbackPanel}>
+        <CallNowButton leadId={lead.id} disabledReason={callNowDisabledReason(lead)} />
+        {(lead.lastCallbackAt || lead.callbackAttempts > 0) && (
+          <span className={styles.noteMeta}>
+            {lead.lastCallbackAt ? `Last callback ${formatDateTime(lead.lastCallbackAt)}` : ""}
+            {lead.callbackAttempts > 0
+              ? ` · ${lead.callbackAttempts}/${MAX_CALLBACK_ATTEMPTS} automatic attempts for this follow-up`
+              : ""}
+          </span>
+        )}
+        {lead.lastCallbackError && <span className={styles.callNowError}>{lead.lastCallbackError}</span>}
+      </div>
 
       <div className={styles.detailGrid}>
         <Field label="Interested course" value={lead.interestedCourse} />
@@ -128,6 +161,7 @@ export default function LeadDetail({ lead }: { lead: LeadDetailData }) {
           <ol className={styles.callList}>
             {lead.calls.map((call) => {
               const meta = [
+                DIRECTION_LABELS[call.direction] ?? "",
                 formatDuration(call),
                 call.cost !== null ? `$${call.cost.toFixed(2)}` : "",
                 call.endedReason,

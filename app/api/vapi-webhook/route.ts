@@ -53,6 +53,8 @@ interface VapiAnalysis {
 
 interface VapiCall {
   id?: string;
+  /** "inboundPhoneCall" | "outboundPhoneCall" | "webCall" | … */
+  type?: string;
   customer?: VapiCustomer;
   analysis?: VapiAnalysis;
   startedAt?: string;
@@ -313,6 +315,7 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
       startedAt: call?.startedAt,
       endedAt: call?.endedAt,
       cost: call?.cost,
+      direction: callDirection(call?.type),
       rawAnalysis: analysis,
     });
   } catch (error: unknown) {
@@ -334,7 +337,12 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
   //    calls that were newly saved, so a retried webhook can't double-count.
   if (callRecordId) {
     try {
-      await attachCallToLead(record, callRecordId, call?.endedAt);
+      await attachCallToLead(record, callRecordId, {
+        startedAt: call?.startedAt,
+        endedAt: call?.endedAt,
+        endedReason: message.endedReason,
+        direction: callDirection(call?.type),
+      });
     } catch (error: unknown) {
       console.error("[vapi-webhook] Failed to update lead:", error);
     }
@@ -353,7 +361,17 @@ interface CallRecordMeta {
   startedAt?: string;
   endedAt?: string;
   cost?: number;
+  direction?: CallDirection;
   rawAnalysis?: VapiAnalysis;
+}
+
+type CallDirection = "inbound" | "outbound" | "web" | "";
+
+function callDirection(type: string | undefined): CallDirection {
+  if (type === "inboundPhoneCall") return "inbound";
+  if (type === "outboundPhoneCall") return "outbound";
+  if (type === "webCall") return "web";
+  return "";
 }
 
 /** Cheap early check so a retried webhook doesn't re-run Gemini. Never throws. */
@@ -378,16 +396,45 @@ async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): 
     startedAt: meta.startedAt ? new Date(meta.startedAt) : undefined,
     endedAt: meta.endedAt ? new Date(meta.endedAt) : undefined,
     cost: meta.cost,
+    direction: meta.direction,
     rawAnalysis: meta.rawAnalysis,
   });
 
   return doc._id.toString();
 }
 
-async function attachCallToLead(record: CallRecord, callRecordId: string, endedAt?: string): Promise<void> {
-  const callTime = new Date(endedAt ?? record.timestamp);
+interface CallOutcome {
+  startedAt?: string;
+  endedAt?: string;
+  endedReason?: string;
+  direction: CallDirection;
+}
+
+/**
+ * Whether an outbound callback actually reached the student: not voicemail,
+ * busy or unanswered, and long enough to be a conversation.
+ */
+function isConnectedCallback(outcome: CallOutcome): boolean {
+  if (outcome.direction !== "outbound") return false;
+  if (/voicemail|no-answer|busy|failed|error|did-not-answer/i.test(outcome.endedReason ?? "")) return false;
+  if (!outcome.startedAt || !outcome.endedAt) return false;
+  const seconds = (new Date(outcome.endedAt).getTime() - new Date(outcome.startedAt).getTime()) / 1000;
+  return seconds >= 20;
+}
+
+async function attachCallToLead(record: CallRecord, callRecordId: string, outcome: CallOutcome): Promise<void> {
+  const callTime = new Date(outcome.endedAt ?? record.timestamp);
   const leadId = await upsertLeadFromCall(record, callTime);
   await CallRecordModel.updateOne({ _id: callRecordId }, { $set: { leadId } });
+
+  // A callback that reached the student settles the follow-up it was made
+  // for, so the scheduler doesn't ring them again tomorrow.
+  if (isConnectedCallback(outcome)) {
+    await LeadModel.updateOne(
+      { _id: leadId },
+      { $set: { followUpAt: null, callbackAttempts: 0, lastCallbackError: "" } }
+    );
+  }
 
   if (normalizeLeadTemperature(record.leadTemperature) !== "Hot") return;
 
