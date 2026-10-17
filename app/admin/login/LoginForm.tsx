@@ -40,7 +40,9 @@ export default function LoginForm() {
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    // method="post": if this is submitted before the page's JavaScript has
+    // loaded, the browser's fallback must not put the password in the URL.
+    <form className={styles.form} onSubmit={handleSubmit} method="post">
       <label className={styles.field}>
         <span>Email</span>
         <input
