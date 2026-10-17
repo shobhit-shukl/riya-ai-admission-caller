@@ -23,6 +23,9 @@ export interface LeadListItem {
   hostelRequired: string;
   location: string;
   nextAction: string;
+  callerRole: string;
+  leadTemperature: string;
+  preferredCallbackTime: string;
 }
 
 export interface LeadDetail extends LeadListItem {
@@ -46,6 +49,9 @@ interface CallRecordLean {
   hostelRequired?: string;
   location?: string;
   nextAction?: string;
+  callerRole?: string;
+  leadTemperature?: string;
+  preferredCallbackTime?: string;
   endedReason?: string;
   startedAt?: Date | string;
   endedAt?: Date | string;
@@ -70,6 +76,9 @@ function serializeLead(doc: CallRecordLean): LeadDetail {
     hostelRequired: doc.hostelRequired ?? "",
     location: doc.location ?? "",
     nextAction: doc.nextAction ?? "",
+    callerRole: doc.callerRole ?? "",
+    leadTemperature: doc.leadTemperature ?? "",
+    preferredCallbackTime: doc.preferredCallbackTime ?? "",
     endedReason: doc.endedReason ?? "",
     startedAt: doc.startedAt ? toIsoString(doc.startedAt) : null,
     endedAt: doc.endedAt ? toIsoString(doc.endedAt) : null,

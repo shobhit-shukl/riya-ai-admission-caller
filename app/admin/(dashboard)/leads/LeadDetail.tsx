@@ -35,6 +35,9 @@ export default function LeadDetail({ lead }: { lead: LeadDetailData }) {
         <Field label="Hostel required" value={lead.hostelRequired} />
         <Field label="Location" value={lead.location} />
         <Field label="Next action" value={lead.nextAction} />
+        <Field label="Caller role" value={lead.callerRole} />
+        <Field label="Lead temperature" value={lead.leadTemperature} />
+        <Field label="Preferred callback time" value={lead.preferredCallbackTime} />
         <Field label="Ended reason" value={lead.endedReason} />
       </div>
 

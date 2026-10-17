@@ -43,6 +43,12 @@ export interface CallRecord {
   location: string;
   /** Agreed next action / follow-up step — Column J: Next Action */
   nextAction: string;
+  /** Who called: student / parent / other — Column K: Caller Role */
+  callerRole: string;
+  /** hot / warm / cold — Column L: Lead Temperature */
+  leadTemperature: string;
+  /** When the caller wants to be called back — Column M: Preferred Callback Time */
+  preferredCallbackTime: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +90,7 @@ function getAuthClient() {
 /**
  * Appends one row to the configured Google Sheet.
  *
- * Column layout (A → J) — must match the sheet header row:
+ * Column layout (A → M) — must match the sheet header row:
  *   A – Date & Time       (ISO-8601 timestamp)
  *   B – Caller Name       (empty if unknown)
  *   C – Phone Number      (E.164 format)
@@ -95,6 +101,9 @@ function getAuthClient() {
  *   H – Hostel Required   (e.g. "Yes" / "No" / "Unknown")
  *   I – Location          (caller's city or region)
  *   J – Next Action       (agreed follow-up step)
+ *   K – Caller Role       (student / parent / other)
+ *   L – Lead Temperature  (hot / warm / cold)
+ *   M – Preferred Callback Time
  *
  * Required env vars (in addition to auth vars above):
  *   GOOGLE_SHEET_ID    – the spreadsheet ID from the Sheet URL
@@ -119,12 +128,13 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
   // If sheetName contains spaces or special chars, single-quote it.
   // The tab name must EXACTLY match what exists in the spreadsheet.
   const escapedName = sheetName.replace(/'/g, "\\'");
-  const range = `'${escapedName}'!A:J`;
+  const range = `'${escapedName}'!A:M`;
 
-  // Values must be in the same order as the sheet columns (A → J):
+  // Values must be in the same order as the sheet columns (A → M):
   // A: Date & Time | B: Caller Name  | C: Phone Number    | D: Interested Course
   // E: Call Summary | F: Full Transcript | G: Academic Marks
   // H: Hostel Required | I: Location | J: Next Action
+  // K: Caller Role | L: Lead Temperature | M: Preferred Callback Time
   const values: string[][] = [
     [
       formatInAppTimeZone(record.timestamp, { dateStyle: "medium", timeStyle: "short" }),
@@ -137,6 +147,9 @@ export async function appendCallRecord(record: CallRecord): Promise<void> {
       record.hostelRequired,
       record.location,
       record.nextAction,
+      record.callerRole,
+      record.leadTemperature,
+      record.preferredCallbackTime,
     ],
   ];
 

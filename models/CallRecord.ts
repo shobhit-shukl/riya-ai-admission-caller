@@ -1,7 +1,7 @@
 /**
  * models/CallRecord.ts
  *
- * Mongoose schema mirroring the Google Sheet columns (A-J) in
+ * Mongoose schema mirroring the Google Sheet columns (A-M) in
  * lib/googleSheets.ts, plus a few extra Vapi call-metadata fields that
  * don't have a column in the sheet but are useful to keep for lookups
  * and debugging (callId, endedReason, startedAt, endedAt, cost, and the
@@ -23,6 +23,9 @@ const CallRecordSchema = new Schema(
     hostelRequired: { type: String, default: "" },
     location: { type: String, default: "" },
     nextAction: { type: String, default: "" },
+    callerRole: { type: String, default: "" },
+    leadTemperature: { type: String, default: "" },
+    preferredCallbackTime: { type: String, default: "" },
     endedReason: { type: String, default: "" },
     startedAt: { type: Date },
     endedAt: { type: Date },
