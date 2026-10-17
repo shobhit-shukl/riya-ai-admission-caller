@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-admin": "node scripts/create-admin.mjs"
+    "create-admin": "node scripts/create-admin.mjs",
+    "backfill-leads": "node scripts/backfill-leads.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -15,11 +16,13 @@
     "jose": "^6.2.12",
     "mongoose": "^9.10.0",
     "next": "16.3.4",
+    "nodemailer": "^10.1.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

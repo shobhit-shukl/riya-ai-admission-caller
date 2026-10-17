@@ -186,11 +186,11 @@ export default async function AnalyticsPage() {
                 <div>
                   <span className={styles.recentName}>{lead.callerName || "Unknown caller"}</span>
                   <span className={styles.recentMeta}>
-                    {lead.callerNumber} · {lead.interestedCourse || "No course captured"}
+                    {lead.callerNumber || "No number"} · {lead.interestedCourse || "No course captured"}
                   </span>
                 </div>
                 <span className={styles.recentDate}>
-                  {formatInAppTimeZone(lead.timestamp, {
+                  {formatInAppTimeZone(lead.lastCallAt, {
                     month: "short",
                     day: "numeric",
                     hour: "numeric",

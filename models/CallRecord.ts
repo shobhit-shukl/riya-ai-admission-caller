@@ -13,7 +13,9 @@ import { Schema, model, models } from "mongoose";
 const CallRecordSchema = new Schema(
   {
     callId: { type: String },
-    timestamp: { type: Date, required: true },
+    // The Lead (one per caller) this call belongs to — see models/Lead.ts.
+    leadId: { type: Schema.Types.ObjectId, ref: "Lead", index: true },
+    timestamp: { type: Date, required: true, index: true },
     callerName: { type: String, default: "" },
     callerNumber: { type: String, default: "", index: true },
     interestedCourse: { type: String, default: "" },

@@ -15,6 +15,8 @@
  *      Structured Outputs.
  *   4. Writes the resulting record to MongoDB, then Google Sheets —
  *      skipping both if this call was already recorded (Vapi retries).
+ *   5. Merges the call into the caller's Lead (one per phone number) and
+ *      emails the admissions team if it's a Hot lead.
  *
  * Vapi webhook docs: https://docs.vapi.ai/server-url/events
  */
@@ -24,7 +26,11 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { appendCallRecord, type CallRecord } from "@/lib/googleSheets";
 import { extractCallData } from "@/lib/extractCallData";
 import { connectToDatabase } from "@/lib/mongodb";
+import { normalizeLeadTemperature } from "@/lib/leadPipeline";
+import { upsertLeadFromCall } from "@/lib/leadStore";
+import { sendHotLeadAlert } from "@/lib/notify";
 import CallRecordModel from "@/models/CallRecord";
+import LeadModel from "@/models/Lead";
 
 // Processing runs in `after()` once Vapi has its 200, but it still has to
 // finish within the route's max duration (Gemini + MongoDB + Sheets).
@@ -290,8 +296,9 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
   //    was already recorded by an earlier delivery of the same webhook.
   //    Any other MongoDB failure shouldn't stop the record reaching the
   //    sheet, so only a duplicate skips the sheet write.
+  let callRecordId: string | undefined;
   try {
-    await saveCallRecordToMongo(record, {
+    callRecordId = await saveCallRecordToMongo(record, {
       callId: call?.id,
       endedReason: message.endedReason,
       startedAt: call?.startedAt,
@@ -311,6 +318,17 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
     await appendCallRecord(record);
   } catch (error: unknown) {
     console.error("[vapi-webhook] Failed to append to Google Sheet:", error);
+  }
+
+  // 4. Fold the call into the caller's Lead (one per phone number) and,
+  //    if it's a hot lead, alert the admissions team right away. Only for
+  //    calls that were newly saved, so a retried webhook can't double-count.
+  if (callRecordId) {
+    try {
+      await attachCallToLead(record, callRecordId, call?.endedAt);
+    } catch (error: unknown) {
+      console.error("[vapi-webhook] Failed to update lead:", error);
+    }
   }
 
   console.log(`[vapi-webhook] Processed call ${call?.id ?? "(no id)"} at ${timestamp}`);
@@ -339,10 +357,11 @@ async function isAlreadyRecorded(callId: string): Promise<boolean> {
   }
 }
 
-async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): Promise<void> {
+/** Saves the call and returns its document id. */
+async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): Promise<string> {
   await connectToDatabase();
 
-  await CallRecordModel.create({
+  const doc = await CallRecordModel.create({
     ...record,
     timestamp: new Date(record.timestamp),
     callId: meta.callId,
@@ -351,5 +370,28 @@ async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): 
     endedAt: meta.endedAt ? new Date(meta.endedAt) : undefined,
     cost: meta.cost,
     rawAnalysis: meta.rawAnalysis,
+  });
+
+  return doc._id.toString();
+}
+
+async function attachCallToLead(record: CallRecord, callRecordId: string, endedAt?: string): Promise<void> {
+  const callTime = new Date(endedAt ?? record.timestamp);
+  const leadId = await upsertLeadFromCall(record, callTime);
+  await CallRecordModel.updateOne({ _id: callRecordId }, { $set: { leadId } });
+
+  if (normalizeLeadTemperature(record.leadTemperature) !== "Hot") return;
+
+  const lead = await LeadModel.findById(leadId).select("callCount").lean<{ callCount?: number }>();
+  await sendHotLeadAlert({
+    leadId: leadId.toString(),
+    callerName: record.callerName,
+    callerNumber: record.callerNumber,
+    interestedCourse: record.interestedCourse,
+    location: record.location,
+    preferredCallbackTime: record.preferredCallbackTime,
+    nextAction: record.nextAction,
+    summary: record.summary,
+    callCount: lead?.callCount ?? 1,
   });
 }
