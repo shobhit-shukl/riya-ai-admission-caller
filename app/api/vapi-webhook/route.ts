@@ -143,14 +143,17 @@ function safeEqual(a: string, b: string): boolean {
 /**
  * Checks the shared secret configured on the Vapi assistant's Server URL.
  * Vapi sends it as `x-vapi-secret` (server secret) or as a Bearer token
- * (Bearer-token server credential); either is accepted.
+ * (Bearer-token server credential). Both are checked — Vapi can send an
+ * org-level `x-vapi-secret` alongside the assistant's Bearer credential —
+ * and the request is accepted if either matches. Surrounding whitespace is
+ * ignored, since a pasted secret often picks up a trailing newline.
  *
  * Without VAPI_WEBHOOK_SECRET, anyone who finds the URL could POST fake
  * leads — so in production a missing secret rejects every request rather
  * than silently accepting them.
  */
 function isAuthorizedVapiRequest(req: NextRequest): { ok: true } | { ok: false; status: number } {
-  const expected = process.env.VAPI_WEBHOOK_SECRET;
+  const expected = process.env.VAPI_WEBHOOK_SECRET?.trim();
 
   if (!expected) {
     if (process.env.NODE_ENV === "production") {
@@ -160,13 +163,19 @@ function isAuthorizedVapiRequest(req: NextRequest): { ok: true } | { ok: false; 
     return { ok: true }; // Local development without a secret.
   }
 
-  const headerSecret = req.headers.get("x-vapi-secret");
-  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const provided = headerSecret ?? bearer;
+  const headerSecret = req.headers.get("x-vapi-secret")?.trim();
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
 
-  if (provided && safeEqual(provided, expected)) {
+  if ([headerSecret, bearer].some((provided) => provided && safeEqual(provided, expected))) {
     return { ok: true };
   }
+
+  // Names and lengths only — never the values — so a mismatch can be diagnosed from the logs.
+  console.warn(
+    `[vapi-webhook] Rejected: secret mismatch (expected length ${expected.length}; ` +
+      `x-vapi-secret ${headerSecret === undefined ? "absent" : `length ${headerSecret.length}`}; ` +
+      `bearer ${bearer === undefined ? "absent" : `length ${bearer.length}`}).`
+  );
 
   return { ok: false, status: 401 };
 }
