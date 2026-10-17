@@ -44,6 +44,13 @@ const LeadSchema = new Schema(
     callCount: { type: Number, default: 0 },
     firstCallAt: { type: Date },
     lastCallAt: { type: Date, index: true },
+
+    // Outbound callbacks (lib/outboundCalls.ts, lib/callbacks.ts).
+    // Attempts count towards the current follow-up date and reset when it changes.
+    doNotCall: { type: Boolean, default: false },
+    callbackAttempts: { type: Number, default: 0 },
+    lastCallbackAt: { type: Date, default: null },
+    lastCallbackError: { type: String, default: "" },
   },
   { timestamps: true }
 );

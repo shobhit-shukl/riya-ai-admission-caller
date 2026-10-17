@@ -32,6 +32,8 @@ const CallRecordSchema = new Schema(
     startedAt: { type: Date },
     endedAt: { type: Date },
     cost: { type: Number },
+    // "inbound" (student called us), "outbound" (callback), "web", or "" if unknown.
+    direction: { type: String, default: "" },
     rawAnalysis: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

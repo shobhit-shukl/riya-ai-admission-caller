@@ -57,11 +57,16 @@ export interface LeadCall {
   startedAt: string | null;
   endedAt: string | null;
   cost: number | null;
+  direction: string;
 }
 
 export interface LeadDetail extends LeadListItem {
   notes: LeadNote[];
   calls: LeadCall[];
+  doNotCall: boolean;
+  callbackAttempts: number;
+  lastCallbackAt: string | null;
+  lastCallbackError: string;
 }
 
 // Loose shapes of lean documents.
@@ -84,6 +89,10 @@ interface LeadLean {
   firstCallAt?: Date;
   lastCallAt?: Date;
   notes?: { _id: { toString(): string }; text: string; author?: string; createdAt?: Date }[];
+  doNotCall?: boolean;
+  callbackAttempts?: number;
+  lastCallbackAt?: Date | null;
+  lastCallbackError?: string;
 }
 
 interface CallRecordLean {
@@ -98,6 +107,7 @@ interface CallRecordLean {
   startedAt?: Date | string;
   endedAt?: Date | string;
   cost?: number;
+  direction?: string;
 }
 
 function toIsoString(value: Date | string | undefined | null): string {
@@ -139,6 +149,7 @@ function serializeCall(doc: CallRecordLean): LeadCall {
     startedAt: doc.startedAt ? toIsoString(doc.startedAt) : null,
     endedAt: doc.endedAt ? toIsoString(doc.endedAt) : null,
     cost: typeof doc.cost === "number" ? doc.cost : null,
+    direction: doc.direction ?? "",
   };
 }
 
@@ -312,6 +323,10 @@ export async function getLeadById(id: string): Promise<LeadDetail | null> {
         }))
         .reverse(),
       calls: calls.map(serializeCall),
+      doNotCall: doc.doNotCall === true,
+      callbackAttempts: doc.callbackAttempts ?? 0,
+      lastCallbackAt: doc.lastCallbackAt ? toIsoString(doc.lastCallbackAt) : null,
+      lastCallbackError: doc.lastCallbackError ?? "",
     };
   } catch {
     // Invalid ObjectId format, etc.

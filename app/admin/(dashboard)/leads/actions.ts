@@ -2,7 +2,8 @@
 
 /**
  * Server Actions for working a lead from the dashboard: move it through the
- * pipeline, set a follow-up date, and add counselor notes.
+ * pipeline, set a follow-up date, add counselor notes, and have the
+ * assistant call the lead back.
  *
  * Server Actions are reachable by direct POST, not just through the UI, so
  * each one checks the admin session itself.
@@ -11,6 +12,7 @@
 import { isValidObjectId } from "mongoose";
 import { revalidatePath } from "next/cache";
 import { getAdminSession } from "@/lib/auth";
+import { callLeadNow } from "@/lib/callbacks";
 import { connectToDatabase } from "@/lib/mongodb";
 import { isLeadStatus } from "@/lib/leadPipeline";
 import { istDayStart } from "@/lib/leads";
@@ -45,10 +47,42 @@ export async function updateLeadPipeline(formData: FormData): Promise<void> {
   // <input type="date"> sends YYYY-MM-DD (or "" to clear the follow-up).
   const followUpDate = String(formData.get("followUpDate") ?? "");
   const followUpAt = /^\d{4}-\d{2}-\d{2}$/.test(followUpDate) ? istDayStart(followUpDate) : null;
+  const doNotCall = formData.get("doNotCall") === "on";
 
   await connectToDatabase();
-  await LeadModel.updateOne({ _id: id }, { $set: { status, followUpAt } });
+  const current = (await LeadModel.findById(id).select("followUpAt").lean()) as { followUpAt?: Date | null } | null;
+  const followUpChanged = (current?.followUpAt?.getTime() ?? null) !== (followUpAt?.getTime() ?? null);
+
+  await LeadModel.updateOne(
+    { _id: id },
+    {
+      $set: {
+        status,
+        followUpAt,
+        doNotCall,
+        // A new follow-up date gets a fresh set of scheduled callback attempts.
+        ...(followUpChanged ? { callbackAttempts: 0, lastCallbackError: "" } : {}),
+      },
+    }
+  );
   revalidateLead(id);
+}
+
+export interface CallNowState {
+  ok: boolean;
+  message: string;
+}
+
+export async function callLeadNowAction(_previous: CallNowState | null, formData: FormData): Promise<CallNowState> {
+  await requireAdmin();
+  const id = readLeadId(formData);
+
+  const result = await callLeadNow(id);
+  revalidateLead(id);
+
+  return result.ok
+    ? { ok: true, message: "Calling now. The call will appear in this lead's history when it ends." }
+    : { ok: false, message: result.error };
 }
 
 export async function addLeadNote(formData: FormData): Promise<void> {

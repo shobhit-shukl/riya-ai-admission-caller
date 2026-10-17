@@ -220,6 +220,37 @@
   gap: 4px;
 }
 
+/* Call now + callback status */
+.callbackPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.callNowForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.callNowForm button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.callNowSuccess {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.callNowError {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
 /* Notes */
 .noteForm {
   display: flex;
