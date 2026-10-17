@@ -1,7 +1,7 @@
 import dashboardStyles from "../dashboard.module.css";
 import styles from "./leads.module.css";
 
-const COLUMN_WIDTHS = ["70%", "80%", "60%", "75%", "50%", "65%"];
+const COLUMN_WIDTHS = ["70%", "80%", "60%", "75%", "50%", "65%", "55%", "30%"];
 
 export default function LeadsLoading() {
   return (
@@ -15,12 +15,14 @@ export default function LeadsLoading() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Last call</th>
               <th>Caller</th>
               <th>Phone</th>
               <th>Course</th>
-              <th>Hostel</th>
-              <th>Location</th>
+              <th>Temp</th>
+              <th>Status</th>
+              <th>Follow-up</th>
+              <th>Calls</th>
             </tr>
           </thead>
           <tbody>

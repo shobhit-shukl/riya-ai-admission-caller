@@ -5,12 +5,18 @@
  * When a call ends (message.type === "end-of-call-report"), it:
  *   1. Verifies the request really came from Vapi (shared secret).
  *   2. Acknowledges immediately, then — after the response is sent —
- *      reads whatever Vapi's own call analysis already extracted
- *      (message.call.analysis.summary / .structuredData).
- *   3. Fills in anything still missing with a Gemini pass over the
- *      transcript (course interest, marks, hostel, location, next action).
+ *      reads whatever Vapi already extracted: the assistant's Structured
+ *      Outputs (message.artifact.structuredOutputs) first, then the legacy
+ *      call analysis (message.call.analysis.summary / .structuredData).
+ *   3. If no Structured Outputs arrived, fills in anything still missing
+ *      with a Gemini pass over the transcript (course interest, marks,
+ *      hostel, location, next action).
+ *      Caller role, lead temperature and callback time only come from
+ *      Structured Outputs.
  *   4. Writes the resulting record to MongoDB, then Google Sheets —
  *      skipping both if this call was already recorded (Vapi retries).
+ *   5. Merges the call into the caller's Lead (one per phone number) and
+ *      emails the admissions team if it's a Hot lead.
  *
  * Vapi webhook docs: https://docs.vapi.ai/server-url/events
  */
@@ -20,7 +26,11 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { appendCallRecord, type CallRecord } from "@/lib/googleSheets";
 import { extractCallData } from "@/lib/extractCallData";
 import { connectToDatabase } from "@/lib/mongodb";
+import { normalizeLeadTemperature } from "@/lib/leadPipeline";
+import { upsertLeadFromCall } from "@/lib/leadStore";
+import { sendHotLeadAlert } from "@/lib/notify";
 import CallRecordModel from "@/models/CallRecord";
+import LeadModel from "@/models/Lead";
 
 // Processing runs in `after()` once Vapi has its 200, but it still has to
 // finish within the route's max duration (Gemini + MongoDB + Sheets).
@@ -50,8 +60,15 @@ interface VapiCall {
   cost?: number;
 }
 
+interface VapiStructuredOutput {
+  name?: string;
+  result?: unknown;
+}
+
 interface VapiArtifact {
   transcript?: string;
+  /** Structured Outputs configured on the assistant, keyed by structured-output ID. */
+  structuredOutputs?: Record<string, VapiStructuredOutput>;
 }
 
 interface VapiMessage {
@@ -88,6 +105,32 @@ function readStructuredField(
   }
 
   return "";
+}
+
+/** Turns one structured-output result into sheet-friendly text ("" when there's nothing to keep). */
+function stringifyStructuredResult(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+  if (Array.isArray(value)) return value.map(stringifyStructuredResult).filter(Boolean).join(", ");
+  return JSON.stringify(value);
+}
+
+/** Flattens Vapi's Structured Outputs (keyed by ID) into a name → text map, skipping empty results. */
+function readStructuredOutputs(
+  outputs: Record<string, VapiStructuredOutput> | undefined
+): Record<string, string> {
+  const byName: Record<string, string> = {};
+  if (!outputs) return byName;
+
+  for (const output of Object.values(outputs)) {
+    if (!output?.name) continue;
+    const value = stringifyStructuredResult(output.result);
+    if (value) byName[output.name] = value;
+  }
+
+  return byName;
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -179,36 +222,46 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
   const call = message.call;
   const analysis = call?.analysis ?? message.analysis;
   const structuredData = analysis?.structuredData;
+  const outputs = readStructuredOutputs(message.artifact?.structuredOutputs);
 
   if (call?.id && (await isAlreadyRecorded(call.id))) {
     console.warn(`[vapi-webhook] Call ${call.id} already recorded — skipping duplicate delivery.`);
     return;
   }
 
-  // 1. Pull what Vapi already knows.
-  const callerNumber: string = call?.customer?.number ?? "Unknown";
+  // 1. Pull what Vapi already knows: Structured Outputs first, then the
+  //    legacy analysis.structuredData keys.
+  // customer.number is the real caller ID on phone calls; the number the
+  // caller said out loud is only a fallback (e.g. web calls have none).
+  const customerNumber = call?.customer?.number;
+  const callerNumber: string =
+    (customerNumber && customerNumber !== "Unknown" ? customerNumber : outputs.callerPhone) || "Unknown";
   const transcript: string =
     message.artifact?.transcript ?? message.transcript ?? "No transcript available.";
 
-  let callerName: string = call?.customer?.name ?? "";
-  let summary: string = analysis?.summary ?? message.summary ?? "";
-  let interestedCourse = readStructuredField(structuredData, [
-    "interestedCourse",
-    "courseInterest",
-    "course",
-  ]);
-  let academicMarks = readStructuredField(structuredData, ["academicMarks", "marks"]);
-  let hostelRequired = readStructuredField(structuredData, ["hostelRequired", "hostel"]);
-  let location = readStructuredField(structuredData, ["location", "city"]);
-  let nextAction = readStructuredField(structuredData, ["nextAction", "followUp"]);
+  let callerName: string =
+    outputs.callerName || readStructuredField(structuredData, ["callerName"]) || call?.customer?.name || "";
+  let summary: string = outputs.callSummary || analysis?.summary || message.summary || "";
+  let interestedCourse =
+    outputs.interestedCourse ||
+    readStructuredField(structuredData, ["interestedCourse", "courseInterest", "course"]);
+  let academicMarks = outputs.academicMarks || readStructuredField(structuredData, ["academicMarks", "marks"]);
+  let hostelRequired = outputs.hostelRequired || readStructuredField(structuredData, ["hostelRequired", "hostel"]);
+  let location = outputs.location || readStructuredField(structuredData, ["location", "city"]);
+  let nextAction = outputs.nextAction || readStructuredField(structuredData, ["nextAction", "followUp"]);
+  const callerRole = outputs.callerRole ?? "";
+  const leadTemperature = outputs.leadTemperature ?? "";
+  const preferredCallbackTime = outputs.preferredCallbackTime ?? "";
 
   // 2. Fill in anything Vapi didn't already give us with an LLM pass
-  //    over the transcript — this is what actually populates the sheet
-  //    when the assistant isn't configured with a structuredDataSchema.
+  //    over the transcript. When Structured Outputs arrived, Vapi has
+  //    already read the whole transcript — an empty field there means the
+  //    caller never said it, so a second (paid) Gemini pass is skipped.
+  const hasStructuredOutputs = Object.keys(outputs).length > 0;
   const hasEverything =
     callerName && summary && interestedCourse && academicMarks && hostelRequired && location && nextAction;
 
-  if (!hasEverything) {
+  if (!hasStructuredOutputs && !hasEverything) {
     const extracted = await extractCallData(transcript, summary);
     callerName ||= extracted.callerName;
     summary ||= extracted.summary;
@@ -234,14 +287,18 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
     hostelRequired,
     location,
     nextAction,
+    callerRole,
+    leadTemperature,
+    preferredCallbackTime,
   };
 
   // 3. MongoDB first: its unique callId index tells us whether this call
   //    was already recorded by an earlier delivery of the same webhook.
   //    Any other MongoDB failure shouldn't stop the record reaching the
   //    sheet, so only a duplicate skips the sheet write.
+  let callRecordId: string | undefined;
   try {
-    await saveCallRecordToMongo(record, {
+    callRecordId = await saveCallRecordToMongo(record, {
       callId: call?.id,
       endedReason: message.endedReason,
       startedAt: call?.startedAt,
@@ -261,6 +318,17 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
     await appendCallRecord(record);
   } catch (error: unknown) {
     console.error("[vapi-webhook] Failed to append to Google Sheet:", error);
+  }
+
+  // 4. Fold the call into the caller's Lead (one per phone number) and,
+  //    if it's a hot lead, alert the admissions team right away. Only for
+  //    calls that were newly saved, so a retried webhook can't double-count.
+  if (callRecordId) {
+    try {
+      await attachCallToLead(record, callRecordId, call?.endedAt);
+    } catch (error: unknown) {
+      console.error("[vapi-webhook] Failed to update lead:", error);
+    }
   }
 
   console.log(`[vapi-webhook] Processed call ${call?.id ?? "(no id)"} at ${timestamp}`);
@@ -289,10 +357,11 @@ async function isAlreadyRecorded(callId: string): Promise<boolean> {
   }
 }
 
-async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): Promise<void> {
+/** Saves the call and returns its document id. */
+async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): Promise<string> {
   await connectToDatabase();
 
-  await CallRecordModel.create({
+  const doc = await CallRecordModel.create({
     ...record,
     timestamp: new Date(record.timestamp),
     callId: meta.callId,
@@ -301,5 +370,28 @@ async function saveCallRecordToMongo(record: CallRecord, meta: CallRecordMeta): 
     endedAt: meta.endedAt ? new Date(meta.endedAt) : undefined,
     cost: meta.cost,
     rawAnalysis: meta.rawAnalysis,
+  });
+
+  return doc._id.toString();
+}
+
+async function attachCallToLead(record: CallRecord, callRecordId: string, endedAt?: string): Promise<void> {
+  const callTime = new Date(endedAt ?? record.timestamp);
+  const leadId = await upsertLeadFromCall(record, callTime);
+  await CallRecordModel.updateOne({ _id: callRecordId }, { $set: { leadId } });
+
+  if (normalizeLeadTemperature(record.leadTemperature) !== "Hot") return;
+
+  const lead = await LeadModel.findById(leadId).select("callCount").lean<{ callCount?: number }>();
+  await sendHotLeadAlert({
+    leadId: leadId.toString(),
+    callerName: record.callerName,
+    callerNumber: record.callerNumber,
+    interestedCourse: record.interestedCourse,
+    location: record.location,
+    preferredCallbackTime: record.preferredCallbackTime,
+    nextAction: record.nextAction,
+    summary: record.summary,
+    callCount: lead?.callCount ?? 1,
   });
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { LeadDetail as LeadDetailData } from "@/lib/leads";
+import { useRouter } from "next/navigation";
+import type { LeadListItem } from "@/lib/leads";
 import { formatInAppTimeZone } from "@/lib/time";
-import LeadDetail from "./LeadDetail";
+import { StatusBadge, TemperatureBadge } from "./LeadBadges";
 import styles from "./leads.module.css";
 
 function formatShortDate(iso: string): string {
@@ -16,69 +16,56 @@ function formatShortDate(iso: string): string {
   });
 }
 
-export default function LeadsTable({ leads }: { leads: LeadDetailData[] }) {
-  const [selectedLead, setSelectedLead] = useState<LeadDetailData | null>(null);
+function formatFollowUp(iso: string | null): string {
+  return iso ? formatInAppTimeZone(iso, { month: "short", day: "numeric" }) : "—";
+}
 
-  useEffect(() => {
-    if (!selectedLead) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelectedLead(null);
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedLead]);
+export default function LeadsTable({ leads, dueBefore }: { leads: LeadListItem[]; dueBefore: string }) {
+  const router = useRouter();
 
   return (
-    <>
-      <div className={styles.tableWrapper}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Caller</th>
-              <th>Phone</th>
-              <th>Course</th>
-              <th>Hostel</th>
-              <th>Location</th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((lead) => (
-              <tr key={lead.id} className={styles.row} onClick={() => setSelectedLead(lead)}>
-                <td>{formatShortDate(lead.timestamp)}</td>
-                <td>{lead.callerName || "Unknown"}</td>
+    <div className={styles.tableWrapper}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>Last call</th>
+            <th>Caller</th>
+            <th>Phone</th>
+            <th>Course</th>
+            <th>Temp</th>
+            <th>Status</th>
+            <th>Follow-up</th>
+            <th>Calls</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((lead) => {
+            const href = `/admin/leads/${lead.id}`;
+            const isDue = lead.followUpAt !== null && lead.followUpAt < dueBefore;
+
+            return (
+              <tr key={lead.id} className={styles.row} onClick={() => router.push(href)}>
+                <td>{formatShortDate(lead.lastCallAt)}</td>
+                <td>
+                  <Link href={href} className={styles.rowLink} onClick={(event) => event.stopPropagation()}>
+                    {lead.callerName || "Unknown"}
+                  </Link>
+                </td>
                 <td>{lead.callerNumber || "—"}</td>
                 <td>{lead.interestedCourse || "—"}</td>
-                <td>{lead.hostelRequired || "—"}</td>
-                <td>{lead.location || "—"}</td>
+                <td>
+                  <TemperatureBadge temperature={lead.leadTemperature} />
+                </td>
+                <td>
+                  <StatusBadge status={lead.status} />
+                </td>
+                <td className={isDue ? styles.followUpDue : undefined}>{formatFollowUp(lead.followUpAt)}</td>
+                <td className={styles.numeric}>{lead.callCount}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {selectedLead && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedLead(null)}>
-          <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
-            <div className={styles.modalToolbar}>
-              <Link href={`/admin/leads/${selectedLead.id}`} className={styles.modalFullPageLink}>
-                Open full page ↗
-              </Link>
-              <button
-                type="button"
-                className={styles.modalClose}
-                onClick={() => setSelectedLead(null)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-            <LeadDetail lead={selectedLead} />
-          </div>
-        </div>
-      )}
-    </>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
