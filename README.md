@@ -7,7 +7,8 @@ Riya is an AI voice admissions counselor. She talks to prospective students on t
 3. saves the call to MongoDB, appends it to a Google Sheet, and merges it into the caller's **lead** (one per phone number),
 4. emails the admissions team straight away if it's a **hot** lead (optional),
 5. lets counselors work each lead in the admin dashboard at `/admin`: status pipeline (New → Contacted → Interested → Applied → Enrolled / Lost), follow-up dates, notes, call history with transcripts, search and filters, CSV export, and analytics,
-6. can have the assistant **call leads back**, on demand or automatically when a follow-up is due (optional, see [Outbound callbacks](#outbound-callbacks)).
+6. can have the assistant **call leads back**, on demand or automatically when a follow-up is due (optional, see [Outbound callbacks](#outbound-callbacks)),
+7. lets admins **upload a call list** (Excel/CSV of names and numbers) and have the assistant call each student with one click (see [Call list](#call-list)).
 
 Riya's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
 
@@ -75,6 +76,16 @@ Notes:
 - **Indian calling rules.** Calling people back after they enquired is generally fine, but check TRAI/DLT requirements for automated calls with your telecom provider before enabling the automatic job at scale.
 - **Cost.** Each callback is billed like any Vapi call (Vapi per-minute fee plus your carrier's rate). Voicemail detection keeps unanswered calls short.
 - **More frequent runs.** Vercel's Hobby plan runs cron jobs once a day. On Pro you can change the schedule in `vercel.json` (e.g. hourly), or have any external scheduler call `GET /api/cron/callbacks` with `Authorization: Bearer <CRON_SECRET>`.
+
+## Call list
+
+**Admin → Call list** lets you upload students who haven't called yet (e.g. from a school fair or an enquiry form) and have the assistant call them.
+
+- **Upload** an Excel `.xlsx` or `.csv` file (up to 1 MB / 5,000 rows) with a **Name** and a **Phone** column, plus an optional **Course** column that personalises the call. Common headers are recognised ("Student Name", "Mobile No.", "Contact Number", "Course Interested"…); files without headers work too. **Download sample file** on the page shows the format. Old `.xls` files: open in Excel and *Save As* `.xlsx`.
+- Rows without a valid number are skipped and listed by row number. Each phone number appears once: uploading it again updates the name/course instead of adding a duplicate.
+- **📞 Call** on a row has the assistant ring that student with an introduction ("Hello Diya, this is Sam from Maya Devi University, Dehradun. I'm calling about our B.Tech CSE programme…"). The row shows Called / Failed, and once the call ends it links to the **Lead** created from the conversation.
+- Calling uses the same Vapi setup as [Outbound callbacks](#outbound-callbacks) — until that's configured, you can upload and manage the list but the Call buttons are disabled.
+- **Indian calling rules:** these are first calls to people who may not have contacted you. Make sure you have their consent and check TRAI/DND rules for promotional calls with your telecom provider.
 
 ## Scripts
 

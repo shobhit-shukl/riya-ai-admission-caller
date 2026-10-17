@@ -72,14 +72,24 @@ export interface CallbackLead {
   interestedCourse: string;
 }
 
-export type CallbackTrigger = "manual" | "scheduled";
+/**
+ * manual / scheduled: calling back a lead who contacted us.
+ * call-list: first call to a contact uploaded by an admin (models/Contact.ts).
+ */
+export type CallbackTrigger = "manual" | "scheduled" | "call-list";
 
 export type StartCallResult = { ok: true; callId: string } | { ok: false; error: string };
 
-/** What Sam opens a callback with — personal, so the student knows why we're calling. */
-export function buildCallbackGreeting(lead: CallbackLead): string {
+/** What Sam opens with — personal, so the student knows why we're calling. */
+export function buildCallbackGreeting(lead: CallbackLead, trigger: CallbackTrigger = "manual"): string {
   const firstName = lead.callerName.trim().split(/\s+/)[0];
   const hello = firstName ? `Hello ${firstName}` : "Hello";
+
+  if (trigger === "call-list") {
+    const about = lead.interestedCourse ? ` about our ${lead.interestedCourse} programme` : " about admissions";
+    return `${hello}, this is Sam from Maya Devi University, Dehradun. I'm calling${about} for the upcoming session. Is this a good time to talk for two minutes?`;
+  }
+
   const about = lead.interestedCourse ? ` about ${lead.interestedCourse} admissions` : "";
   return `${hello}, this is Sam from Maya Devi University, calling you back${about}. Is this a good time to talk for two minutes?`;
 }
@@ -92,7 +102,13 @@ export async function startOutboundCall(lead: CallbackLead, trigger: CallbackTri
   const number = toE164(lead.callerNumber, config.defaultCountryCode);
   if (!number) return { ok: false, error: `"${lead.callerNumber || "No number"}" isn't a callable phone number.` };
 
-  const greeting = buildCallbackGreeting(lead);
+  const greeting = buildCallbackGreeting(lead, trigger);
+  const voicemailMessage =
+    trigger === "call-list"
+      ? "Hello, this is Sam from Maya Devi University, Dehradun, calling about admissions for the upcoming session. " +
+        "Please call us back whenever it suits you. Thank you!"
+      : "Hello, this is Sam from Maya Devi University returning your admission enquiry. " +
+        "Please call us back whenever it suits you. Thank you!";
 
   try {
     const response = await fetch(vapiCallUrl(), {
@@ -110,10 +126,8 @@ export async function startOutboundCall(lead: CallbackLead, trigger: CallbackTri
           firstMessage: greeting,
           // Don't pay to talk to an answering machine: leave a short message and hang up.
           voicemailDetection: { provider: "vapi" },
-          voicemailMessage:
-            "Hello, this is Sam from Maya Devi University returning your admission enquiry. " +
-            "Please call us back whenever it suits you. Thank you!",
-          metadata: { leadId: lead.id, trigger },
+          voicemailMessage,
+          metadata: trigger === "call-list" ? { contactId: lead.id, trigger } : { leadId: lead.id, trigger },
         },
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
