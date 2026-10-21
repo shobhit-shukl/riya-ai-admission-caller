@@ -1,0 +1,89 @@
+.studentCell {
+  white-space: normal;
+  min-width: 180px;
+}
+
+.repeatBadge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tile-amber);
+  background: var(--tile-amber-soft);
+}
+
+.details {
+  margin-top: 4px;
+}
+
+.details summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.detailList {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 8px 0 2px;
+  font-size: 12.5px;
+}
+
+.detailList dt {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.detailList dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.detailList a {
+  color: var(--accent);
+}
+
+.message {
+  white-space: pre-wrap;
+  max-width: 360px;
+}
+
+.statusSelect {
+  padding: 5px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.status_new {
+  color: var(--tile-indigo);
+}
+
+.status_contacted {
+  color: var(--tile-teal);
+}
+
+.status_converted {
+  color: var(--success);
+}
+
+.status_closed {
+  color: var(--text-muted);
+}
+
+.callForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.callButton {
+  padding: 6px 14px;
+}
+
+.callButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

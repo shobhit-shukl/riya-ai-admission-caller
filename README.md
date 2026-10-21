@@ -8,7 +8,8 @@ Riya is an AI voice admissions counselor. She talks to prospective students on t
 4. emails the admissions team straight away if it's a **hot** lead (optional),
 5. lets counselors work each lead in the admin dashboard at `/admin`: status pipeline (New → Contacted → Interested → Applied → Enrolled / Lost), follow-up dates, notes, call history with transcripts, search and filters, CSV export, and analytics,
 6. can have the assistant **call leads back**, on demand or automatically when a follow-up is due (optional, see [Outbound callbacks](#outbound-callbacks)),
-7. lets admins **upload a call list** (Excel/CSV of names and numbers) and have the assistant call each student with one click (see [Call list](#call-list)).
+7. lets admins **upload a call list** (Excel/CSV of names and numbers) and have the assistant call each student with one click (see [Call list](#call-list)),
+8. collects **enquiries from the university website** into **Admin → Website leads** (see [Website leads](#website-leads)).
 
 Riya's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
 
@@ -86,6 +87,34 @@ Notes:
 - **📞 Call** on a row has the assistant ring that student with an introduction ("Hello Diya, this is Sam from Maya Devi University, Dehradun. I'm calling about our B.Tech CSE programme…"). The row shows Called / Failed, and once the call ends it links to the **Lead** created from the conversation.
 - Calling uses the same Vapi setup as [Outbound callbacks](#outbound-callbacks) — until that's configured, you can upload and manage the list but the Call buttons are disabled.
 - **Indian calling rules:** these are first calls to people who may not have contacted you. Make sure you have their consent and check TRAI/DND rules for promotional calls with your telecom provider.
+
+## Website leads
+
+Enquiry / apply / callback / brochure forms on the university website are forwarded here and listed under **Admin → Website leads**: search and filter by status, form and course; set a status (New → Contacted → Converted / Closed); see the message, page and campaign; **📞 Call** the student (uses the [Outbound callbacks](#outbound-callbacks) setup); and jump to the call **Lead** once Sam has spoken to them. Repeat enquiries from the same number are flagged (×2, ×3…).
+
+**Connecting a website:** set the same long random string as `WEBSITE_LEADS_SECRET` here and in the website's backend, then have the backend (never the browser) send each submission:
+
+```http
+POST https://<this-app>/api/website-leads
+Authorization: Bearer <WEBSITE_LEADS_SECRET>
+Content-Type: application/json
+
+{
+  "externalId": "website-enquiry-id",      // makes retries safe (optional)
+  "name": "Priya Sharma",                  // required
+  "phone": "+91 98765 43210",              // required
+  "email": "priya@example.com",
+  "course": "BBA",
+  "city": "Dehradun",
+  "message": "Is hostel available?",
+  "formType": "enquiry",                   // enquiry | apply | callback | brochure | contact
+  "sourcePage": "/programs/bba",
+  "utmSource": "google", "utmMedium": "cpc", "utmCampaign": "admissions-2026",
+  "submittedAt": "2026-10-20T10:15:00Z"
+}
+```
+
+Responses: `201 {id}` created, `200 {id, duplicate: true}` already received (same `externalId`), `400 {errors}` invalid, `401` wrong secret.
 
 ## Scripts
 
