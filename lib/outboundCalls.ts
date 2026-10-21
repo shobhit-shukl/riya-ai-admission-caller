@@ -75,8 +75,16 @@ export interface CallbackLead {
 /**
  * manual / scheduled: calling back a lead who contacted us.
  * call-list: first call to a contact uploaded by an admin (models/Contact.ts).
+ * website: calling someone who enquired on the university website (models/WebsiteLead.ts).
  */
-export type CallbackTrigger = "manual" | "scheduled" | "call-list";
+export type CallbackTrigger = "manual" | "scheduled" | "call-list" | "website";
+
+const METADATA_KEY: Record<CallbackTrigger, string> = {
+  manual: "leadId",
+  scheduled: "leadId",
+  "call-list": "contactId",
+  website: "websiteLeadId",
+};
 
 export type StartCallResult = { ok: true; callId: string } | { ok: false; error: string };
 
@@ -88,6 +96,11 @@ export function buildCallbackGreeting(lead: CallbackLead, trigger: CallbackTrigg
   if (trigger === "call-list") {
     const about = lead.interestedCourse ? ` about our ${lead.interestedCourse} programme` : " about admissions";
     return `${hello}, this is Sam from Maya Devi University, Dehradun. I'm calling${about} for the upcoming session. Is this a good time to talk for two minutes?`;
+  }
+
+  if (trigger === "website") {
+    const about = lead.interestedCourse ? ` about ${lead.interestedCourse}` : "";
+    return `${hello}, this is Sam from Maya Devi University. Thank you for your enquiry on our website${about}. Is this a good time to talk for two minutes?`;
   }
 
   const about = lead.interestedCourse ? ` about ${lead.interestedCourse} admissions` : "";
@@ -127,7 +140,7 @@ export async function startOutboundCall(lead: CallbackLead, trigger: CallbackTri
           // Don't pay to talk to an answering machine: leave a short message and hang up.
           voicemailDetection: { provider: "vapi" },
           voicemailMessage,
-          metadata: trigger === "call-list" ? { contactId: lead.id, trigger } : { leadId: lead.id, trigger },
+          metadata: { [METADATA_KEY[trigger]]: lead.id, trigger },
         },
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
