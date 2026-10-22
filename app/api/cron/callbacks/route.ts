@@ -48,7 +48,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const result = await runScheduledCallbacks(batchLimit());
   console.log(
-    `[cron/callbacks] started ${result.started.length}, failed ${result.failed.length}`,
+    `[cron/callbacks] started ${result.started.length}, failed ${result.failed.length}` +
+      (result.stoppedEarly ? `; stopped early: ${result.stoppedEarly}` : ""),
     result.failed.length ? result.failed : ""
   );
 

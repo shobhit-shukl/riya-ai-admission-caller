@@ -18,19 +18,27 @@
  *   5. Merges the call into the caller's Lead (one per phone number) and
  *      emails the admissions team if it's a Hot lead.
  *
+ * An outbound call nobody answered (no answer, busy, voicemail) skips
+ * steps 3–5: it is kept in the call history and its outcome is shown on
+ * the lead / call-list contact / website lead it was made for, but it
+ * creates no lead and adds no empty row to the sheet.
+ *
  * Vapi webhook docs: https://docs.vapi.ai/server-url/events
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { isValidObjectId } from "mongoose";
 import { after, NextRequest, NextResponse } from "next/server";
 import { appendCallRecord, type CallRecord } from "@/lib/googleSheets";
 import { extractCallData } from "@/lib/extractCallData";
 import { connectToDatabase } from "@/lib/mongodb";
-import { normalizeLeadTemperature } from "@/lib/leadPipeline";
+import { normalizeLeadTemperature, phoneKey } from "@/lib/leadPipeline";
 import { upsertLeadFromCall } from "@/lib/leadStore";
 import { sendHotLeadAlert } from "@/lib/notify";
 import CallRecordModel from "@/models/CallRecord";
+import ContactModel from "@/models/Contact";
 import LeadModel from "@/models/Lead";
+import WebsiteLeadModel from "@/models/WebsiteLead";
 
 // Processing runs in `after()` once Vapi has its 200, but it still has to
 // finish within the route's max duration (Gemini + MongoDB + Sheets).
@@ -60,6 +68,8 @@ interface VapiCall {
   startedAt?: string;
   endedAt?: string;
   cost?: number;
+  /** On calls Riya places: { leadId | contactId | websiteLeadId, trigger } (lib/outboundCalls.ts). */
+  assistantOverrides?: { metadata?: Record<string, unknown> };
 }
 
 interface VapiStructuredOutput {
@@ -250,6 +260,16 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
   const transcript: string =
     message.artifact?.transcript ?? message.transcript ?? "No transcript available.";
 
+  const direction = callDirection(call?.type);
+  const unanswered =
+    direction === "outbound"
+      ? unansweredReason(message.endedReason, message.artifact?.transcript ?? message.transcript ?? "")
+      : null;
+  if (unanswered) {
+    await recordUnansweredCall(message, callerNumber, unanswered);
+    return;
+  }
+
   let callerName: string =
     outputs.callerName || readStructuredField(structuredData, ["callerName"]) || call?.customer?.name || "";
   let summary: string = outputs.callSummary || analysis?.summary || message.summary || "";
@@ -315,7 +335,7 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
       startedAt: call?.startedAt,
       endedAt: call?.endedAt,
       cost: call?.cost,
-      direction: callDirection(call?.type),
+      direction,
       rawAnalysis: analysis,
     });
   } catch (error: unknown) {
@@ -341,14 +361,104 @@ async function processEndOfCallReport(message: VapiMessage): Promise<void> {
         startedAt: call?.startedAt,
         endedAt: call?.endedAt,
         endedReason: message.endedReason,
-        direction: callDirection(call?.type),
+        direction,
       });
+      // The student picked up: clear any earlier "no answer" on the contact / website lead.
+      if (direction === "outbound") await recordOutcomeOnSource(call, "");
     } catch (error: unknown) {
       console.error("[vapi-webhook] Failed to update lead:", error);
     }
   }
 
   console.log(`[vapi-webhook] Processed call ${call?.id ?? "(no id)"} at ${timestamp}`);
+}
+
+// ---------------------------------------------------------------------------
+// Outbound calls nobody answered
+// ---------------------------------------------------------------------------
+
+/**
+ * For an outbound call that never reached the student, a short reason to
+ * show the admin ("No answer", "Went to voicemail"…); null if they picked up.
+ */
+function unansweredReason(endedReason: string | undefined, transcript: string): string | null {
+  const reason = endedReason ?? "";
+  if (/voicemail/i.test(reason)) return "Went to voicemail";
+  if (/customer-did-not-answer|no-answer/i.test(reason)) return "No answer";
+  if (/customer-busy/i.test(reason)) return "Line busy";
+  if (/failed-to-connect/i.test(reason)) return "Call didn't connect";
+  // Other errors only count as unanswered if nobody said anything.
+  if (/error/i.test(reason) && !transcript.trim()) return "Call didn't connect";
+  return null;
+}
+
+/**
+ * Keeps an unanswered outbound call in the history (on the student's Lead,
+ * if they already have one) and notes the outcome where the call was
+ * started from. No new lead, no extraction, no empty row in the sheet.
+ */
+async function recordUnansweredCall(message: VapiMessage, callerNumber: string, outcome: string): Promise<void> {
+  const call = message.call;
+  const note = `Last call: ${outcome}`;
+  const record: CallRecord = {
+    timestamp: new Date().toISOString(),
+    callerName: call?.customer?.name ?? "",
+    callerNumber,
+    interestedCourse: "",
+    summary: `${outcome} (outbound call).`,
+    transcript: message.artifact?.transcript ?? message.transcript ?? "",
+    academicMarks: "",
+    hostelRequired: "",
+    location: "",
+    nextAction: "",
+    callerRole: "",
+    leadTemperature: "",
+    preferredCallbackTime: "",
+  };
+
+  let callRecordId: string;
+  try {
+    callRecordId = await saveCallRecordToMongo(record, {
+      callId: call?.id,
+      endedReason: message.endedReason,
+      startedAt: call?.startedAt,
+      endedAt: call?.endedAt,
+      cost: call?.cost,
+      direction: "outbound",
+    });
+  } catch (error: unknown) {
+    if (!isDuplicateKeyError(error)) console.error("[vapi-webhook] Failed to save unanswered call:", error);
+    return;
+  }
+
+  try {
+    const key = phoneKey(callerNumber);
+    const lead = key
+      ? await LeadModel.findOneAndUpdate({ phoneKey: key }, { $set: { lastCallbackError: note } }).select("_id").lean<{
+          _id: unknown;
+        }>()
+      : null;
+    if (lead) await CallRecordModel.updateOne({ _id: callRecordId }, { $set: { leadId: lead._id } });
+    await recordOutcomeOnSource(call, note);
+  } catch (error: unknown) {
+    console.error("[vapi-webhook] Failed to record unanswered call outcome:", error);
+  }
+
+  console.log(`[vapi-webhook] Outbound call ${call?.id ?? "(no id)"} not answered: ${message.endedReason}`);
+}
+
+/** Shows how a call went on the call-list contact or website lead it was placed from (via call metadata). */
+async function recordOutcomeOnSource(call: VapiCall | undefined, note: string): Promise<void> {
+  const metadata = call?.assistantOverrides?.metadata ?? {};
+  const contactId = String(metadata.contactId ?? "");
+  const websiteLeadId = String(metadata.websiteLeadId ?? "");
+
+  if (isValidObjectId(contactId)) {
+    await ContactModel.updateOne({ _id: contactId }, { $set: { lastError: note } });
+  }
+  if (isValidObjectId(websiteLeadId)) {
+    await WebsiteLeadModel.updateOne({ _id: websiteLeadId }, { $set: { lastCallError: note } });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -434,6 +544,9 @@ async function attachCallToLead(record: CallRecord, callRecordId: string, outcom
       { _id: leadId },
       { $set: { followUpAt: null, callbackAttempts: 0, lastCallbackError: "" } }
     );
+  } else if (outcome.direction === "outbound") {
+    // Picked up, if only briefly: an earlier "no answer" no longer applies.
+    await LeadModel.updateOne({ _id: leadId }, { $set: { lastCallbackError: "" } });
   }
 
   if (normalizeLeadTemperature(record.leadTemperature) !== "Hot") return;

@@ -73,7 +73,8 @@ export default async function ContactsPage({
       {!configured && (
         <p className={styles.notice}>
           📵 Calling isn&apos;t set up yet, so the Call buttons are disabled. You can upload and organise your list
-          now; calls start working once a phone number is connected (see README → Outbound callbacks).
+          now; calls start working once a phone number is connected (see{" "}
+          <Link href="/admin/calling-setup">Calling setup</Link>).
         </p>
       )}
 
@@ -139,6 +140,7 @@ export default async function ContactsPage({
                         {STATUS_LABELS[contact.status]}
                         {contact.callAttempts > 1 ? ` ×${contact.callAttempts}` : ""}
                       </span>
+                      {contact.lastError && <span className={leadStyles.callNowError}> {contact.lastError}</span>}
                     </td>
                     <td>
                       {contact.lastCalledAt
