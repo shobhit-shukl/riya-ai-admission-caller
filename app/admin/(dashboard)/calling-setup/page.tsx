@@ -62,7 +62,12 @@ export default async function CallingSetupPage() {
         <h2>Settings (Vercel → riya-ai-admission-caller → Settings → Environment Variables)</h2>
         <ol className={styles.steps}>
           <li>
-            <code>VAPI_API_KEY</code>: Vapi → Organization → API Keys → <strong>Private</strong> key
+            First, in Vapi → Phone Numbers → Create Phone Number, import your Twilio, Telnyx or Vonage number (free
+            Vapi numbers can only receive calls). Then open it and, under Inbound Settings, choose Sam as the
+            Assistant.
+          </li>
+          <li>
+            <code>VAPI_API_KEY</code>: Vapi → API Keys → <strong>Private</strong> API Keys
           </li>
           <li>
             <code>VAPI_ASSISTANT_ID</code>: the ID under Sam&apos;s name in Vapi → Assistants
