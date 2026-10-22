@@ -215,7 +215,7 @@ async function vapiGet<T>(path: string, apiKey: string): Promise<{ status: numbe
 
 function vapiGetProblem(what: string, status: number): string {
   if (status === 0) return `Couldn't reach Vapi to look up the ${what}.`;
-  if (status === 401 || status === 403) return "Vapi rejected the API key. Use the Private key (Vapi → Organization → API Keys).";
+  if (status === 401 || status === 403) return "Vapi rejected the API key. Use a key from Vapi → API Keys → Private API Keys (not a Public one).";
   if (status === 404 || status === 400) return `Vapi has no ${what} with this ID. Copy it again from the Vapi dashboard.`;
   return `Vapi returned ${status} when looking up the ${what}.`;
 }
@@ -241,7 +241,7 @@ function webhookCheck(serverUrl: string): SetupCheck {
   const appUrl = process.env.APP_URL?.trim().replace(/\/+$/, "");
 
   if (!url) {
-    return { label, status: "fail", detail: "Sam has no Server URL, so finished calls never reach Riya. Set it to …/api/vapi-webhook." };
+    return { label, status: "fail", detail: "Sam has no Server URL, so finished calls never reach Riya. In Vapi → Assistants → Sam → Advanced → Webhook Server, set Server URL to …/api/vapi-webhook and publish." };
   }
   if (!url.endsWith("/api/vapi-webhook")) {
     return { label, status: "fail", detail: `Sam's Server URL is ${url}. It should end in /api/vapi-webhook.` };
@@ -264,7 +264,7 @@ async function assistantChecks(apiKey: string, assistantId: string): Promise<Set
     checks.push({
       label: "End-of-call report",
       status: "fail",
-      detail: "Sam's Server Messages don't include \"end-of-call-report\", so calls won't be saved. Tick it in Vapi → Sam → Advanced → Server Messages.",
+      detail: "Sam's Server Messages don't include \"end-of-call-report\", so calls won't be saved. Add it in Vapi → Assistants → Sam → Advanced (Server Messages) and publish.",
     });
   }
   return checks;
@@ -281,11 +281,12 @@ async function phoneNumberChecks(apiKey: string, phoneNumberId: string, assistan
       : { label: "Phone number", status: "ok", detail: `${shown} is active.` },
   ];
 
+  // Free Vapi numbers are inbound-only (US area codes): every Call button would fail.
   if (body.provider === "vapi") {
     checks.push({
-      label: "Calls to India",
-      status: "warn",
-      detail: "Free Vapi numbers can't call Indian (+91) numbers. Import a Twilio, Vonage or Telnyx number instead.",
+      label: "Outbound calls",
+      status: "fail",
+      detail: "This is a free Vapi number, which can only receive calls. Import a Twilio, Telnyx or Vonage number (Vapi → Phone Numbers → Create Phone Number) and use its ID instead.",
     });
   }
 
@@ -295,7 +296,7 @@ async function phoneNumberChecks(apiKey: string, phoneNumberId: string, assistan
       : {
           label: "Incoming calls",
           status: "warn",
-          detail: "This number isn't assigned to Sam, so students who call it back won't be answered. Vapi → Phone Numbers → this number → Inbound assistant: Sam.",
+          detail: "This number isn't assigned to Sam, so students who call it back won't be answered. In Vapi → Phone Numbers → this number → Inbound Settings, choose Sam as the Assistant and save.",
         }
   );
   return checks;
@@ -309,7 +310,7 @@ export async function checkCallingSetup(): Promise<SetupCheck[]> {
   const checks: SetupCheck[] = [];
 
   if (!apiKey) {
-    checks.push({ label: "Vapi API key", status: "fail", detail: "Add VAPI_API_KEY (Vapi → Organization → API Keys → Private key)." });
+    checks.push({ label: "Vapi API key", status: "fail", detail: "Add VAPI_API_KEY (Vapi → API Keys → Private API Keys)." });
   }
 
   if (!assistantId) {

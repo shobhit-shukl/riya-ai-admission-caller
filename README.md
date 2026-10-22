@@ -58,8 +58,8 @@ The assistant can phone leads back: a **📞 Call now** button on each lead page
 
 It's built in but **dormant until configured** — until then the button says callbacks aren't set up. To turn it on:
 
-1. **Get a phone number that can call your students** and import it into Vapi (**Phone Numbers → Import**, from Twilio, Vonage, Plivo or Telnyx). Vapi's free numbers can't call India. With Twilio, also allow India under *Voice → Settings → Geo permissions*, or calls to +91 numbers are blocked.
-2. **In Vapi, open the number and set Inbound → Assistant to Sam**, so students who call the number back reach Sam (their calls are filed as leads like any other). Calls Riya places use their own opening line ("Hello Priya, this is Sam… calling you back"). If Sam's prompt assumes the student called in, add a line such as *"Sometimes you are the one calling the student back; never thank them for calling in that case."*
+1. **Get a phone number that can call your students** and import it into Vapi (**Phone Numbers → Create Phone Number → Import Twilio**, or Telnyx, Vonage and other supported providers). Vapi's free numbers can only receive calls, so they can't be used for callbacks. With Twilio, also allow India under *Voice → Settings → Geo permissions*, or calls to +91 numbers are blocked.
+2. **In Vapi, open the number and, under Inbound Settings, choose Sam as the Assistant**, so students who call the number back reach Sam (their calls are filed as leads like any other). Calls Riya places use their own opening line ("Hello Priya, this is Sam… calling you back"). If Sam's prompt assumes the student called in, add a line such as *"Sometimes you are the one calling the student back; never thank them for calling in that case."*
 3. **Collect three values from Vapi:**
    - **API Keys → Private key** (`VAPI_API_KEY`)
    - **Assistants → your assistant → ID** under its name (`VAPI_ASSISTANT_ID`)
