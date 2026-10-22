@@ -1,0 +1,125 @@
+.summary {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.summaryReady {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.summaryNotReady {
+  color: var(--text);
+  background: var(--tile-amber-soft);
+}
+
+.card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.card h2 {
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.card > p {
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 2px 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.check:first-child {
+  border-top: none;
+}
+
+.icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ok {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.warn {
+  color: var(--tile-amber);
+  background: var(--tile-amber-soft);
+}
+
+.fail {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.info {
+  color: var(--tile-indigo);
+  background: var(--tile-indigo-soft);
+}
+
+.checkLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkDetail {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.testForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.testForm input {
+  flex: 0 1 220px;
+  min-width: 0;
+}
+
+.steps {
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.steps code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  background: var(--surface-muted);
+}

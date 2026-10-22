@@ -29,7 +29,7 @@ const DIRECTION_LABELS: Record<string, string> = {
 };
 
 function callNowDisabledReason(lead: LeadDetailData): string | null {
-  if (!isOutboundCallingConfigured()) return "Callbacks aren't set up yet (see README → Outbound callbacks).";
+  if (!isOutboundCallingConfigured()) return "Callbacks aren't set up yet (see Calling setup in the sidebar).";
   if (lead.doNotCall) return "Marked \"Do not call\".";
   if (!toE164(lead.callerNumber)) return "No callable phone number on this lead.";
   return null;

@@ -58,20 +58,26 @@ The assistant can phone leads back: a **📞 Call now** button on each lead page
 
 It's built in but **dormant until configured** — until then the button says callbacks aren't set up. To turn it on:
 
-1. **Get a phone number that can call your students** and import it into Vapi (**Phone Numbers → Import**, from Twilio, Vonage, Plivo or Telnyx). Vapi's free numbers are US-only. Optionally set your assistant as the number's inbound assistant too.
-2. **Collect three values from Vapi:**
+1. **Get a phone number that can call your students** and import it into Vapi (**Phone Numbers → Import**, from Twilio, Vonage, Plivo or Telnyx). Vapi's free numbers can't call India. With Twilio, also allow India under *Voice → Settings → Geo permissions*, or calls to +91 numbers are blocked.
+2. **In Vapi, open the number and set Inbound → Assistant to Sam**, so students who call the number back reach Sam (their calls are filed as leads like any other). Calls Riya places use their own opening line ("Hello Priya, this is Sam… calling you back"). If Sam's prompt assumes the student called in, add a line such as *"Sometimes you are the one calling the student back; never thank them for calling in that case."*
+3. **Collect three values from Vapi:**
    - **API Keys → Private key** (`VAPI_API_KEY`)
    - **Assistants → your assistant → ID** under its name (`VAPI_ASSISTANT_ID`)
-   - **Phone Numbers → the number → Phone Number ID** (`VAPI_PHONE_NUMBER_ID`)
-3. **Add them in Vercel** (Project → Settings → Environment Variables; store `VAPI_API_KEY` as a *Secret*), then **Redeploy**. "Call now" now works.
-4. **Test it:** open a lead with your own number and press **Call now**. When you hang up, the call appears in that lead's history.
-5. **(Optional) Automatic callbacks:** add `CRON_SECRET` (a long random string) and `AUTO_CALLBACKS_ENABLED=true`, then redeploy. Every Monday–Saturday around 11 AM IST, the job calls up to `CALLBACK_BATCH_LIMIT` leads whose follow-up date is today or earlier.
+   - **Phone Numbers → the number → Phone Number ID** (`VAPI_PHONE_NUMBER_ID`), the ID, not the number itself
+4. **Add them in Vercel** (Project → Settings → Environment Variables; store `VAPI_API_KEY` as a *Secret*), then **Redeploy**.
+5. **Open Admin → Calling setup.** It checks every setting live against Vapi (key accepted, assistant and number found, number active and assigned to Sam, Sam's Server URL pointing at this app, webhook secret set) and says exactly what to fix. Nothing is called while checking.
+6. **Test it:** on the same page, enter your own mobile and press **Call my phone**. Talk to Sam, hang up, and the call appears under **Leads** a minute later.
+7. **(Optional) Automatic callbacks:** add `CRON_SECRET` (a long random string) and `AUTO_CALLBACKS_ENABLED=true`, then redeploy. Every Monday–Saturday around 11 AM IST, the job calls up to `CALLBACK_BATCH_LIMIT` leads whose follow-up date is today or earlier.
+
+**Unanswered calls.** When a call Riya places isn't answered (no answer, busy, voicemail), it stays in the lead's call history and the lead, Call list row or Website lead shows *Last call: No answer* (or *Line busy*, *Went to voicemail*). It doesn't create a lead, isn't added to the Google Sheet and doesn't run extraction.
 
 Rules the automatic job follows:
 - Only within `CALLBACK_HOURS` (IST, default 10–19), Monday–Saturday.
 - Skips leads that are Enrolled, Lost or marked **Do not call** (checkbox on the lead page).
 - At most one call per lead per day, and at most 3 attempts per follow-up date. Setting a new follow-up date starts a fresh set of attempts.
 - A callback that connects (20 s or longer, not voicemail) clears the follow-up date, so the lead isn't called again.
+- If Vapi itself fails (rejected key, outage, rate limit), the run stops at the first failure and that lead gets its attempt back, so one setup problem can't use up everyone's attempts. The error shows on the lead page and in the Vercel logs.
+- Each run stops starting new calls after about 40 seconds (to stay inside Vercel's time limit); leads left over are called on the next run.
 
 Notes:
 - **Indian calling rules.** Calling people back after they enquired is generally fine, but check TRAI/DLT requirements for automated calls with your telecom provider before enabling the automatic job at scale.

@@ -101,7 +101,16 @@ function dueCallbackQuery(now: Date): Record<string, unknown> {
 export interface ScheduledRunResult {
   started: { leadId: string; callId: string }[];
   failed: { leadId: string; error: string }[];
+  /** Why the run ended before working through every due lead, if it did. */
+  stoppedEarly?: string;
 }
+
+/**
+ * Stop starting new calls after this long, so the run (each Vapi request
+ * can take up to 15 s) finishes inside the cron route's 60 s limit.
+ * Leads left over are still due and get called on the next run.
+ */
+const RUN_BUDGET_MS = 40_000;
 
 /**
  * Calls up to `limit` due leads, oldest follow-up first. Each lead is
@@ -111,8 +120,14 @@ export interface ScheduledRunResult {
 export async function runScheduledCallbacks(limit: number, now = new Date()): Promise<ScheduledRunResult> {
   await connectToDatabase();
   const result: ScheduledRunResult = { started: [], failed: [] };
+  const runStartedAt = Date.now();
 
   for (let i = 0; i < limit; i++) {
+    if (Date.now() - runStartedAt > RUN_BUDGET_MS) {
+      result.stoppedEarly = "Time budget used up; the rest are called on the next run.";
+      break;
+    }
+
     const lead = (await LeadModel.findOneAndUpdate(
       dueCallbackQuery(now),
       { $set: { lastCallbackAt: now }, $inc: { callbackAttempts: 1 } },
@@ -126,8 +141,24 @@ export async function runScheduledCallbacks(limit: number, now = new Date()): Pr
     const outcome = await startOutboundCall(toCallbackLead(lead), "scheduled" satisfies CallbackTrigger);
     await recordResult(lead._id, outcome);
 
-    if (outcome.ok) result.started.push({ leadId: lead._id.toString(), callId: outcome.callId });
-    else result.failed.push({ leadId: lead._id.toString(), error: outcome.error });
+    if (outcome.ok) {
+      result.started.push({ leadId: lead._id.toString(), callId: outcome.callId });
+      continue;
+    }
+
+    result.failed.push({ leadId: lead._id.toString(), error: outcome.error });
+
+    // A bad key or Vapi outage would fail every call the same way: give this
+    // lead its attempt (and today's slot) back and stop, rather than burn
+    // through everyone's attempts.
+    if (outcome.systemic) {
+      await LeadModel.updateOne(
+        { _id: lead._id },
+        { $inc: { callbackAttempts: -1 }, $set: { lastCallbackAt: null } }
+      );
+      result.stoppedEarly = outcome.error;
+      break;
+    }
   }
 
   return result;
