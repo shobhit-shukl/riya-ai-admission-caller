@@ -396,6 +396,8 @@
 
 .headingRow {
   display: flex;
+  /* Used alongside .pageHeading, whose column layout pushed the title to the right. */
+  flex-direction: row;
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
