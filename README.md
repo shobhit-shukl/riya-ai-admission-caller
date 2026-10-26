@@ -135,7 +135,7 @@ Edits reach the bot from its next reply, with no redeploy and no change in n8n.
 
 What students get:
 - "Hi", "Namaste", "menu" and similar greetings show a welcome message with three buttons: **Courses & fees**, **How to apply**, **Call me back**.
-- Any other text goes to the AI (Claude), which remembers the last few messages of each chat, keeps replies short, and shares apply/brochure links.
+- Any other text goes to the AI (Google Gemini, free tier), which remembers the last few messages of each chat, keeps replies short, and shares apply/brochure links.
 - Voice notes, images and stickers get a polite "please type your question".
 
 What your team gets:
@@ -144,7 +144,7 @@ What your team gets:
 
 ### Setting it up
 
-You need a Meta Business account, a phone number that is **not** already registered on the WhatsApp or WhatsApp Business app (or remove it from the app first), an [n8n Cloud](https://n8n.io) workspace and an [Anthropic API key](https://console.anthropic.com).
+You need a Meta Business account, a phone number that is **not** already registered on the WhatsApp or WhatsApp Business app (or remove it from the app first), an [n8n Cloud](https://n8n.io) workspace and a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) (the same kind of key as `GEMINI_API_KEY`).
 
 1. **This app:** set `BOT_API_SECRET` (a long random string) in Vercel and redeploy. Add your courses and admission info under **Admin → Courses**.
 2. **Meta app:** at [developers.facebook.com](https://developers.facebook.com) → *My Apps → Create app* → *Business* type, then add the **WhatsApp** product. Under *WhatsApp → API Setup*, add your phone number and verify it. (The free test number works too, but only for up to 5 recipient numbers you add there.)
@@ -153,15 +153,15 @@ You need a Meta Business account, a phone number that is **not** already registe
    - **WhatsApp API**: the access token, plus the *WhatsApp Business Account ID* from API Setup.
    - **WhatsApp OAuth API** (for the trigger): *Client ID* = App ID, *Client Secret* = App secret (*App settings → Basic*).
    - **Header Auth**: Name `Authorization`, Value `Bearer <BOT_API_SECRET>`.
-   - **Anthropic**: your API key.
-5. **Import the workflow:** *Create workflow → ⋯ → Import from file* → `n8n/whatsapp-admissions-bot.json`. Open **Read message** and set `RIYA_URL` to this app's address. Pick the credentials on each node: WhatsApp OAuth on the trigger; WhatsApp API on *Send menu*, *Show typing*, *Send reply*, *Send sorry* and *Ask to type*; Header Auth on *Get courses* and *save_student_details*; Anthropic on *Claude*.
+   - **Google Gemini(PaLM) API**: your Gemini API key (leave the host as is).
+5. **Import the workflow:** *Create workflow → ⋯ → Import from file* → `n8n/whatsapp-admissions-bot.json`. Open **Read message** and set `RIYA_URL` to this app's address. Pick the credentials on each node: WhatsApp OAuth on the trigger; WhatsApp API on *Send menu*, *Show typing*, *Send reply*, *Send sorry* and *Ask to type*; Header Auth on *Get courses* and *save_student_details*; Google Gemini on *Gemini*.
 6. **Activate** the workflow. n8n registers its webhook with your Meta app automatically. A Meta app can only send messages to one webhook, so don't activate a second WhatsApp Trigger on the same app.
 7. **Test:** send "Hi" to the number from your phone. You should get the menu, then try a question like "BBA fees kitni hai?" and "please call me".
 8. **Go live:** in Meta, complete *Business verification*, get your display name approved, and switch the app to *Live*.
 
 Notes:
-- **Cost.** Replies to a student who messaged you within the last 24 hours are free on WhatsApp's side; you pay Anthropic per reply. The whole course list is sent with every message, so the cost grows with how much you write in Admin → Courses. Messaging students first (follow-ups, reminders) needs Meta-approved templates and is billed by Meta. The bot doesn't do that.
-- **Model.** The workflow uses `claude-haiku-5-5` for fast, cheap replies. For more nuanced answers, change it on the **Claude** node to `claude-sonnet-5-5`.
+- **Cost.** Replies to a student who messaged you within the last 24 hours are free on WhatsApp's side, and Gemini's free tier costs nothing. Messaging students first (follow-ups, reminders) needs Meta-approved templates and is billed by Meta. The bot doesn't do that.
+- **Model.** The workflow uses `gemini-3.6-flash` on Gemini's free tier. Two limits apply. The free tier has per-minute and per-day request limits; if many students message at once, some get the "Sorry, try again" reply. On the free tier, Google may also use the conversations to improve its products. If either matters, enable billing on the same key; nothing in n8n changes. To use another model, change it on the **Gemini** node.
 - **Memory** is n8n's in-memory chat buffer (last 12 messages per number). It resets if n8n restarts, which is fine for admission chats. Swap in the Postgres or Redis chat memory node if you want it to persist.
 
 API used by the workflow (both need `Authorization: Bearer <BOT_API_SECRET>`; without the secret they reject everything in production):
