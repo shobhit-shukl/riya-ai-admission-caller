@@ -80,7 +80,7 @@ export default async function WebsiteLeadsPage({ searchParams }: { searchParams:
       <div className={dashboardStyles.pageHeading}>
         <h1>Website leads</h1>
         <p>
-          Enquiries from the university website. {counts.total} total · {counts.new} new · {counts.today} today
+          Enquiries from the university website and the WhatsApp bot. {counts.total} total · {counts.new} new · {counts.today} today
         </p>
       </div>
 
@@ -158,6 +158,11 @@ export default async function WebsiteLeadsPage({ searchParams }: { searchParams:
                       {lead.enquiryCount > 1 && (
                         <span className={styles.repeatBadge} title="Enquiries from this number">
                           ×{lead.enquiryCount}
+                        </span>
+                      )}
+                      {lead.wantsCallback && (
+                        <span className={styles.callbackBadge} title="Asked on WhatsApp for a counsellor to contact them">
+                          🙋 Wants a call
                         </span>
                       )}
                       <details className={styles.details}>

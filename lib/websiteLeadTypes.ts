@@ -15,7 +15,8 @@ export const WEBSITE_LEAD_STATUS_LABELS: Record<WebsiteLeadStatus, string> = {
   closed: "Closed",
 };
 
-export const WEBSITE_FORM_TYPES = ["enquiry", "apply", "callback", "brochure", "contact"] as const;
+// "whatsapp" is set by the WhatsApp bot (POST /api/bot/leads), not by website forms.
+export const WEBSITE_FORM_TYPES = ["enquiry", "apply", "callback", "brochure", "contact", "whatsapp"] as const;
 export type WebsiteFormType = (typeof WEBSITE_FORM_TYPES)[number];
 
 export const WEBSITE_FORM_LABELS: Record<WebsiteFormType, string> = {
@@ -24,4 +25,5 @@ export const WEBSITE_FORM_LABELS: Record<WebsiteFormType, string> = {
   callback: "Callback request",
   brochure: "Brochure",
   contact: "Contact",
+  whatsapp: "WhatsApp",
 };
