@@ -120,6 +120,93 @@ export async function saveWebsiteLead(lead: WebsiteLeadInput): Promise<{ id: str
 }
 
 // ---------------------------------------------------------------------------
+// WhatsApp bot intake
+// ---------------------------------------------------------------------------
+
+export interface WhatsAppLeadInput {
+  name: string;
+  phone: string;
+  email: string;
+  course: string;
+  city: string;
+  /** The bot's summary of what the student is looking for. */
+  message: string;
+  /** The student asked for a counsellor to contact them. */
+  wantsCallback: boolean;
+}
+
+/** Validates what the WhatsApp bot sends. Only the phone number is required. */
+export function parseWhatsAppLead(
+  body: unknown
+): { ok: true; lead: WhatsAppLeadInput } | { ok: false; errors: string[] } {
+  if (typeof body !== "object" || body === null) return { ok: false, errors: ["Body must be a JSON object."] };
+  const raw = body as Record<string, unknown>;
+
+  const phone = text(raw.phone, 30);
+  const email = text(raw.email, 200).toLowerCase();
+  const errors: string[] = [];
+  if (!phone) errors.push("phone is required.");
+  else if (!phoneKey(phone) || !toE164(phone)) errors.push("phone isn't a valid phone number.");
+  if (errors.length > 0) return { ok: false, errors };
+
+  return {
+    ok: true,
+    lead: {
+      name: text(raw.name, 100),
+      phone,
+      // The model sometimes fills a slot with a guess; drop anything that isn't an email.
+      email: EMAIL_PATTERN.test(email) ? email : "",
+      course: text(raw.course, 100),
+      city: text(raw.city, 100),
+      message: typeof raw.message === "string" ? raw.message.trim().slice(0, 2000) : "",
+      wantsCallback: raw.wantsCallback === true || raw.wantsCallback === "true",
+    },
+  };
+}
+
+/**
+ * Keeps one enquiry per WhatsApp number: a returning student updates it
+ * (new details overwrite, blanks don't) and moves it back to the top of the
+ * list, and a Closed one is reopened as New. `newCallbackRequest` is true
+ * only the first time a pending call request is made, so the team is
+ * alerted once rather than on every message.
+ */
+export async function saveWhatsAppLead(
+  lead: WhatsAppLeadInput
+): Promise<{ id: string; created: boolean; newCallbackRequest: boolean }> {
+  await connectToDatabase();
+  const key = phoneKey(lead.phone);
+
+  const update: Record<string, unknown> = { submittedAt: new Date() };
+  for (const field of ["name", "email", "course", "city", "message"] as const) {
+    if (lead[field]) update[field] = lead[field];
+  }
+  if (lead.wantsCallback) update.wantsCallback = true;
+
+  const previous = (await WebsiteLeadModel.findOneAndUpdate(
+    { formType: "whatsapp", phoneKey: key },
+    { $set: update, $setOnInsert: { phone: lead.phone } },
+    { upsert: true, returnDocument: "before" }
+  ).lean()) as unknown as (WebsiteLeadLean & { wantsCallback?: boolean }) | null;
+
+  if (previous?.status === "closed") {
+    await WebsiteLeadModel.updateOne({ _id: previous._id }, { $set: { status: "new" } });
+  }
+
+  const id = previous
+    ? previous._id.toString()
+    : ((await WebsiteLeadModel.findOne({ formType: "whatsapp", phoneKey: key }).select("_id").lean()) as unknown as {
+        _id: { toString(): string };
+      })._id.toString();
+
+  return {
+    id,
+    created: !previous,
+    newCallbackRequest: lead.wantsCallback && !previous?.wantsCallback,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Listing
 // ---------------------------------------------------------------------------
 
@@ -140,6 +227,8 @@ export interface WebsiteLeadListItem {
   callAttempts: number;
   lastCalledAt: string | null;
   lastCallError: string;
+  /** A WhatsApp student is waiting for a counsellor to contact them. */
+  wantsCallback: boolean;
   /** The call Lead for the same phone number, once Sam has spoken to them. */
   leadId: string | null;
   /** How many times this number has enquired on the website. */
@@ -164,6 +253,7 @@ interface WebsiteLeadLean {
   callAttempts?: number;
   lastCalledAt?: Date | null;
   lastCallError?: string;
+  wantsCallback?: boolean;
 }
 
 export interface WebsiteLeadFilters {
@@ -250,6 +340,7 @@ export async function getWebsiteLeadsPage(
       callAttempts: doc.callAttempts ?? 0,
       lastCalledAt: doc.lastCalledAt ? doc.lastCalledAt.toISOString() : null,
       lastCallError: doc.lastCallError ?? "",
+      wantsCallback: doc.wantsCallback ?? false,
       leadId: (doc.phoneKey && leadIdByKey.get(doc.phoneKey)) || null,
       enquiryCount: (doc.phoneKey && countByKey.get(doc.phoneKey)) || 1,
     })),
@@ -277,7 +368,8 @@ export async function countWebsiteLeads(): Promise<{ total: number; new: number;
 export async function setWebsiteLeadStatus(id: string, status: WebsiteLeadStatus): Promise<void> {
   if (!isValidObjectId(id)) return;
   await connectToDatabase();
-  await WebsiteLeadModel.updateOne({ _id: id }, { $set: { status } });
+  // Moving an enquiry on means someone has picked up its call request.
+  await WebsiteLeadModel.updateOne({ _id: id }, { $set: { status, ...(status !== "new" ? { wantsCallback: false } : {}) } });
 }
 
 /** Has the assistant call the student who enquired, and records the outcome. */
@@ -302,6 +394,7 @@ export async function callWebsiteLead(id: string): Promise<StartCallResult> {
         lastCallError: result.ok ? "" : result.error,
         // A first successful call moves a fresh enquiry along the pipeline.
         ...(result.ok && lead.status === "new" ? { status: "contacted" } : {}),
+        ...(result.ok ? { wantsCallback: false } : {}),
       },
       $inc: { callAttempts: 1 },
     }

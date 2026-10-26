@@ -9,7 +9,8 @@ Riya is an AI voice admissions counselor. She talks to prospective students on t
 5. lets counselors work each lead in the admin dashboard at `/admin`: status pipeline (New → Contacted → Interested → Applied → Enrolled / Lost), follow-up dates, notes, call history with transcripts, search and filters, CSV export, and analytics,
 6. can have the assistant **call leads back**, on demand or automatically when a follow-up is due (optional, see [Outbound callbacks](#outbound-callbacks)),
 7. lets admins **upload a call list** (Excel/CSV of names and numbers) and have the assistant call each student with one click (see [Call list](#call-list)),
-8. collects **enquiries from the university website** into **Admin → Website leads** (see [Website leads](#website-leads)).
+8. collects **enquiries from the university website** into **Admin → Website leads** (see [Website leads](#website-leads)),
+9. runs a **WhatsApp bot** (n8n + WhatsApp Cloud API) that answers students from the courses and admission info managed in **Admin → Courses**, and saves interested students as leads (see [WhatsApp bot](#whatsapp-bot)).
 
 Riya's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
 
@@ -121,6 +122,51 @@ Content-Type: application/json
 ```
 
 Responses: `201 {id}` created, `200 {id, duplicate: true}` already received (same `externalId`), `400 {errors}` invalid, `401` wrong secret.
+
+## WhatsApp bot
+
+Students message your WhatsApp Business number and an AI assistant replies, in English, Hindi or Hinglish, about courses, fees, eligibility, scholarships, hostel and the admission process. It runs as an **n8n workflow** ([`n8n/whatsapp-admissions-bot.json`](n8n/whatsapp-admissions-bot.json)) on the official **WhatsApp Cloud API**. Everything it knows comes from this app.
+
+**Admin → Courses** is where you manage it:
+- **Courses**: name, level, department, duration, fees, eligibility, selection process, seats, description, application and brochure links. Untick *Admissions open* to have the bot say admissions are closed; untick *Show to students* to hide a course from the bot.
+- **Admission info**: process, documents, important dates, scholarships, hostel, contact details, application link and anything else. The bot answers **only** from this page. For anything missing it offers a counsellor call instead of guessing.
+
+Edits reach the bot from its next reply, with no redeploy and no change in n8n.
+
+What students get:
+- "Hi", "Namaste", "menu" and similar greetings show a welcome message with three buttons: **Courses & fees**, **How to apply**, **Call me back**.
+- Any other text goes to the AI (Google Gemini, free tier), which remembers the last few messages of each chat, keeps replies short, and shares apply/brochure links.
+- Voice notes, images and stickers get a polite "please type your question".
+
+What your team gets:
+- When a student shares their name, course, city or email, or asks for a call, they appear under **Admin → Website leads** with form **WhatsApp**, one per number, with a one-line summary of what they want. **📞 Call** has Sam phone them, and once they've spoken they link to the call **Lead**.
+- A student asking for a counsellor is marked **🙋 Wants a call** and, if [hot-lead alerts](#how-it-behaves-in-production) are set up, the team gets one email. The badge clears when you call them or move the enquiry past *New*.
+
+### Setting it up
+
+You need a Meta Business account, a phone number that is **not** already registered on the WhatsApp or WhatsApp Business app (or remove it from the app first), an [n8n Cloud](https://n8n.io) workspace and a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) (the same kind of key as `GEMINI_API_KEY`).
+
+1. **This app:** set `BOT_API_SECRET` (a long random string) in Vercel and redeploy. Add your courses and admission info under **Admin → Courses**.
+2. **Meta app:** at [developers.facebook.com](https://developers.facebook.com) → *My Apps → Create app* → *Business* type, then add the **WhatsApp** product. Under *WhatsApp → API Setup*, add your phone number and verify it. (The free test number works too, but only for up to 5 recipient numbers you add there.)
+3. **Permanent access token:** in [Business Settings](https://business.facebook.com/settings) → *Users → System users*, add an *Admin* system user, assign it your app and WhatsApp account, then *Generate token* with `whatsapp_business_messaging` and `whatsapp_business_management`. (The token on the API Setup page expires after 24 hours.)
+4. **n8n credentials** (*Overview → Credentials → Create*):
+   - **WhatsApp API**: the access token, plus the *WhatsApp Business Account ID* from API Setup.
+   - **WhatsApp OAuth API** (for the trigger): *Client ID* = App ID, *Client Secret* = App secret (*App settings → Basic*).
+   - **Header Auth**: Name `Authorization`, Value `Bearer <BOT_API_SECRET>`.
+   - **Google Gemini(PaLM) API**: your Gemini API key (leave the host as is).
+5. **Import the workflow:** *Create workflow → ⋯ → Import from file* → `n8n/whatsapp-admissions-bot.json`. Open **Read message** and set `RIYA_URL` to this app's address. Pick the credentials on each node: WhatsApp OAuth on the trigger; WhatsApp API on *Send menu*, *Show typing*, *Send reply*, *Send sorry* and *Ask to type*; Header Auth on *Get courses* and *save_student_details*; Google Gemini on *Gemini*.
+6. **Activate** the workflow. n8n registers its webhook with your Meta app automatically. A Meta app can only send messages to one webhook, so don't activate a second WhatsApp Trigger on the same app.
+7. **Test:** send "Hi" to the number from your phone. You should get the menu, then try a question like "BBA fees kitni hai?" and "please call me".
+8. **Go live:** in Meta, complete *Business verification*, get your display name approved, and switch the app to *Live*.
+
+Notes:
+- **Cost.** Replies to a student who messaged you within the last 24 hours are free on WhatsApp's side, and Gemini's free tier costs nothing. Messaging students first (follow-ups, reminders) needs Meta-approved templates and is billed by Meta. The bot doesn't do that.
+- **Model.** The workflow uses `gemini-3.6-flash` on Gemini's free tier. Two limits apply. The free tier has per-minute and per-day request limits; if many students message at once, some get the "Sorry, try again" reply. On the free tier, Google may also use the conversations to improve its products. If either matters, enable billing on the same key; nothing in n8n changes. To use another model, change it on the **Gemini** node.
+- **Memory** is n8n's in-memory chat buffer (last 12 messages per number). It resets if n8n restarts, which is fine for admission chats. Swap in the Postgres or Redis chat memory node if you want it to persist.
+
+API used by the workflow (both need `Authorization: Bearer <BOT_API_SECRET>`; without the secret they reject everything in production):
+- `GET /api/bot/knowledge` → `{ institutionName, text, courses, updatedAt }`, where `text` is the active courses and admission info as plain text for the AI.
+- `POST /api/bot/leads` with `{ phone*, name, course, city, email, message, wantsCallback }` → `201 {id}` new, `200 {id}` updated, `400 {errors}`.
 
 ## Scripts
 

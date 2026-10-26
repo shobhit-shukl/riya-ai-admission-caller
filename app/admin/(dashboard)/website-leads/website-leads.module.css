@@ -13,6 +13,17 @@
   background: var(--tile-amber-soft);
 }
 
+.callbackBadge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
 .details {
   margin-top: 4px;
 }

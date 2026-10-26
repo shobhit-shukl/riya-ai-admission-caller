@@ -1,0 +1,463 @@
+{
+  "name": "WhatsApp admissions bot",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000005",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "updates": [
+          "messages"
+        ]
+      },
+      "webhookId": "a1b2c3d4-0000-4000-8000-000000000001"
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000006",
+      "name": "Read message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// ─── Settings: change these two lines ────────────────────────────────\nconst RIYA_URL = 'https://YOUR-RIYA-APP.vercel.app'; // your Riya app, no trailing slash\nconst GRAPH_VERSION = 'v23.0';                       // WhatsApp Cloud API version\n// ─────────────────────────────────────────────────────────────────────\n\n// What the menu buttons mean, phrased as the student would ask it.\nconst BUTTON_QUESTIONS = {\n  courses: 'Which courses do you offer, and what are the fees?',\n  admission: 'How does the admission process work and how do I apply?',\n  counsellor: 'I would like a counsellor to call me back.',\n};\n\nconst GREETING = /^(hi+|hello+|hey+|hii+|helo|namaste|namaskar|good (morning|afternoon|evening)|menu|start|help)[\\s!.🙏👋]*$/i;\n\nconst results = [];\nfor (const item of $input.all()) {\n  const body = item.json;\n  // The trigger normally emits the \"value\" object; also accept the raw webhook shape.\n  const value = body.messages || body.statuses ? body : body.entry?.[0]?.changes?.[0]?.value ?? body;\n  const contact = value.contacts?.[0] ?? {};\n\n  for (const msg of value.messages ?? []) { // delivery/read receipts have no messages: ignored\n    let text = '';\n    let buttonId = '';\n    if (msg.type === 'text') text = msg.text?.body ?? '';\n    if (msg.type === 'interactive') {\n      const reply = msg.interactive?.button_reply ?? msg.interactive?.list_reply ?? {};\n      buttonId = reply.id ?? '';\n      text = BUTTON_QUESTIONS[buttonId] ?? reply.title ?? '';\n    }\n    if (msg.type === 'button') text = msg.button?.text ?? ''; // quick-reply on a template message\n    text = text.trim().slice(0, 1500);\n\n    const route = buttonId === 'menu' || GREETING.test(text) ? 'menu' : text ? 'ai' : 'unsupported';\n    const phoneNumberId = value.metadata?.phone_number_id;\n\n    results.push({\n      json: {\n        route,\n        from: msg.from, // student's number, e.g. 919876543210\n        name: contact.profile?.name ?? '',\n        messageId: msg.id,\n        type: msg.type,\n        text,\n        riyaUrl: RIYA_URL.replace(/\\/+$/, ''),\n        messagesUrl: 'https://graph.facebook.com/' + GRAPH_VERSION + '/' + phoneNumberId + '/messages',\n      },\n    });\n  }\n}\nreturn results;"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000007",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "menu",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "menu"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1b2c3d4-0000-4000-8000-000000000003",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ai"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1b2c3d4-0000-4000-8000-000000000004",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "unsupported",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unsupported"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000008",
+      "name": "Send menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        80
+      ],
+      "parameters": {
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: $json.from,\n  type: 'interactive',\n  interactive: {\n    type: 'button',\n    body: {\n      text: 'Hi' + ($json.name ? ' ' + $json.name.split(' ')[0] : '') + '! 👋 I\\'m the admissions assistant.\\n\\nAsk me anything about our courses, fees, eligibility, scholarships, hostel or the admission process — in English or Hindi. Or tap an option below.'\n    },\n    footer: { text: 'Type your question anytime' },\n    action: {\n      buttons: [\n        { type: 'reply', reply: { id: 'courses', title: 'Courses & fees' } },\n        { type: 'reply', reply: { id: 'admission', title: 'How to apply' } },\n        { type: 'reply', reply: { id: 'counsellor', title: 'Call me back' } }\n      ]\n    }\n  }\n}) }}",
+        "url": "={{ $json.messagesUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000009",
+      "name": "Show typing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: $json.messageId, typing_indicator: { type: 'text' } }) }}",
+        "url": "={{ $json.messagesUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000010",
+      "name": "Get courses",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        300
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "url": "={{ $('Read message').item.json.riyaUrl }}/api/bot/knowledge",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000011",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1160,
+        300
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Read message').item.json.text }}",
+        "options": {
+          "systemMessage": "=You are the admissions assistant for {{ $('Get courses').item.json.institutionName || 'the university' }}, chatting with students and parents on WhatsApp.\nToday is {{ $now.setZone('Asia/Kolkata').toFormat('d LLLL yyyy') }}. The student's WhatsApp name is \"{{ $('Read message').item.json.name }}\".\n\nHOW TO REPLY\n- Reply in the student's language: English, Hindi, or Hinglish (Roman script) if they write that way.\n- Keep it short and easy to read on a phone: 2–6 short lines or a few bullet points, under about 120 words unless they ask for the full list.\n- WhatsApp formatting only: *bold* with single asterisks, \"-\" bullets. No # headings, tables or links in brackets.\n- Be warm and encouraging, like a helpful senior counsellor. At most one emoji.\n- If they ask about courses in general, list course names grouped by level and ask which interests them. Give full details for one course at a time.\n\nFACTS\n- Answer ONLY from the UNIVERSITY INFORMATION below. Never make up fees, dates, eligibility, seats, placements, rankings or scholarships.\n- If the answer isn't there, say a counsellor will confirm it and offer a call back.\n- If admissions for a course are closed, say so.\n- Share the application or brochure link when they want to apply or want more details.\n- Never promise admission, scholarships or discounts.\n- Politely decline anything unrelated to admissions (homework, general knowledge, other colleges) and steer back.\n\nSAVING THE STUDENT (tool: save_student_details)\n- Early in the chat, if you don't know them, naturally ask for their name and the course they're interested in — once, never insist.\n- Whenever you learn something new (name, course, city or email), call save_student_details with everything known so far and a one-line summary of what they want.\n- If they want to talk to a person, ask for a call, want to apply or visit, or seem confused or upset: call save_student_details with wantsCallback = true, and tell them a counsellor will call them on this WhatsApp number soon (during office hours).\n- Never ask for Aadhaar, marksheets, documents, passwords or payments.\n- Never mention tools, systems, or that you are saving their details.\n\nUNIVERSITY INFORMATION\n======================\n{{ $('Get courses').item.json.text }}",
+          "maxIterations": 5
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000012",
+      "name": "Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        540
+      ],
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {
+          "maxOutputTokens": 800,
+          "temperature": 0.3
+        }
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000013",
+      "name": "Chat memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1200,
+        540
+      ],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'whatsapp-' + $('Read message').item.json.from }}",
+        "contextWindowLength": 12
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000014",
+      "name": "save_student_details",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        540
+      ],
+      "parameters": {
+        "toolDescription": "Saves or updates this student's enquiry in the admissions dashboard so a counsellor can follow up. Call it whenever you learn their name, course, city or email, and with wantsCallback=true when they want a counsellor to call them.",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  phone: $('Read message').item.json.from,\n  name: $fromAI('name', \"The student's name if they told you, otherwise their WhatsApp name or empty\", 'string'),\n  course: $fromAI('course', 'The course they are interested in, using the name from the course list, or empty', 'string'),\n  city: $fromAI('city', 'Their city or town, or empty', 'string'),\n  email: $fromAI('email', 'Their email address if they gave one, or empty', 'string'),\n  message: $fromAI('summary', 'One line: what the student wants or asked, e.g. \"Asked about BBA fees and hostel; wants to apply this year\"', 'string'),\n  wantsCallback: $fromAI('wantsCallback', 'true if they want a counsellor to call them or want to talk to a person, otherwise false', 'boolean')\n}) }}",
+        "url": "={{ $('Read message').item.json.riyaUrl }}/api/bot/leads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000015",
+      "name": "Send reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: $('Read message').item.json.from,\n  type: 'text',\n  text: { preview_url: true, body: $json.output.slice(0, 4000) }\n}) }}",
+        "url": "={{ $('Read message').item.json.messagesUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000016",
+      "name": "Send sorry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        420
+      ],
+      "parameters": {
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: $('Read message').item.json.from,\n  type: 'text',\n  text: { preview_url: true, body: 'Sorry, I couldn\\'t answer that just now 🙏 Please try again in a minute, or type *menu* to ask for a counsellor call.' }\n}) }}",
+        "url": "={{ $('Read message').item.json.messagesUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000017",
+      "name": "Ask to type",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        520
+      ],
+      "parameters": {
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: $('Read message').item.json.from,\n  type: 'text',\n  text: { preview_url: true, body: 'Thanks! I can only read text messages for now 🙏 Please type your question about courses or admissions, or type *menu*.' }\n}) }}",
+        "url": "={{ $json.messagesUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0000-4000-8000-000000000018",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -200
+      ],
+      "parameters": {
+        "width": 640,
+        "height": 240,
+        "content": "## WhatsApp admissions bot\n1. **Read message**: set `RIYA_URL` to your Riya app's address.\n2. Credentials: *WhatsApp OAuth* on the trigger, *WhatsApp API* on every node that talks to WhatsApp, *Header Auth* (`Authorization` = `Bearer <BOT_API_SECRET>`) on **Get courses** and **save_student_details**, *Google Gemini (PaLM) API* (free key from aistudio.google.com) on **Gemini**.\n3. Activate the workflow.\n\nCourses and admission info come from **Riya → Admin → Courses**. Students who share details or ask for a call appear under **Website leads** (form: WhatsApp)."
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read message": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Send menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show typing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask to type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show typing": {
+      "main": [
+        [
+          {
+            "node": "Get courses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get courses": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send sorry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send sorry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save_student_details": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

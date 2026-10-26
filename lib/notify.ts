@@ -1,8 +1,9 @@
 /**
  * lib/notify.ts
  *
- * Emails the admissions team the moment a "Hot" lead finishes a call, so a
- * counselor can ring them back while they're still interested. Sent over
+ * Emails the admissions team the moment a "Hot" lead finishes a call, or a
+ * student on WhatsApp asks for a counsellor, so someone can ring them back
+ * while they're still interested. Sent over
  * plain SMTP (works with Gmail app passwords, Zoho, Outlook, SES, etc.).
  *
  * Optional: if SMTP_HOST or ALERT_EMAIL_TO isn't set, alerts are skipped.
@@ -49,55 +50,105 @@ function getAlertConfig() {
   };
 }
 
-/** Sends the hot-lead email. Never throws — a failed alert must not lose the lead. */
-export async function sendHotLeadAlert(lead: HotLeadAlert): Promise<void> {
+interface AlertEmail {
+  /** e.g. "🔥 Hot lead". Followed by the student's name in the heading. */
+  title: string;
+  name: string;
+  course: string;
+  rows: [string, string][];
+  summary: string;
+  /** Path inside the app, e.g. /admin/leads/123. */
+  path: string;
+  linkLabel: string;
+}
+
+async function sendAlertEmail(alert: AlertEmail): Promise<void> {
   const config = getAlertConfig();
   if (!config) return;
 
   // Caller-supplied text ends up in the subject line: keep it to one line.
-  const name = (lead.callerName || "Unknown caller").replace(/\s+/g, " ");
-  const rows: [string, string][] = [
-    ["Phone", lead.callerNumber],
-    ["Course", lead.interestedCourse],
-    ["Location", lead.location],
-    ["Callback time", lead.preferredCallbackTime],
-    ["Next step", lead.nextAction],
-    ["Calls so far", String(lead.callCount)],
-  ];
-  const leadUrl = config.appUrl ? `${config.appUrl}/admin/leads/${lead.leadId}` : "";
+  const name = alert.name.replace(/\s+/g, " ");
+  const plainTitle = alert.title.replace(/^\W+/u, "");
+  const url = config.appUrl ? `${config.appUrl}${alert.path}` : "";
 
   const text = [
-    `Hot lead: ${name}`,
+    `${plainTitle}: ${name}`,
     "",
-    ...rows.map(([label, value]) => `${label}: ${value || "—"}`),
+    ...alert.rows.map(([label, value]) => `${label}: ${value || "—"}`),
     "",
-    lead.summary,
-    leadUrl ? `\nOpen lead: ${leadUrl}` : "",
+    alert.summary,
+    url ? `\n${alert.linkLabel}: ${url}` : "",
   ].join("\n");
 
   const html = `
-    <h2 style="margin:0 0 12px">🔥 Hot lead: ${escapeHtml(name)}</h2>
+    <h2 style="margin:0 0 12px">${escapeHtml(alert.title)}: ${escapeHtml(name)}</h2>
     <table cellpadding="4" style="border-collapse:collapse">
-      ${rows
+      ${alert.rows
         .map(
           ([label, value]) =>
             `<tr><td style="color:#5c5a6b">${label}</td><td><strong>${escapeHtml(value || "—")}</strong></td></tr>`
         )
         .join("")}
     </table>
-    <p>${escapeHtml(lead.summary)}</p>
-    ${leadUrl ? `<p><a href="${escapeHtml(leadUrl)}">Open lead in the dashboard →</a></p>` : ""}
+    <p>${escapeHtml(alert.summary)}</p>
+    ${url ? `<p><a href="${escapeHtml(url)}">${escapeHtml(alert.linkLabel)} →</a></p>` : ""}
   `;
 
   try {
     await nodemailer.createTransport(config.transport).sendMail({
       from: config.from,
       to: config.to,
-      subject: `🔥 Hot lead: ${name}${lead.interestedCourse ? ` — ${lead.interestedCourse}` : ""}`,
+      subject: `${alert.title}: ${name}${alert.course ? ` — ${alert.course.replace(/\s+/g, " ")}` : ""}`,
       text,
       html,
     });
   } catch (error: unknown) {
-    console.error("[notify] Failed to send hot-lead alert:", error);
+    console.error(`[notify] Failed to send "${plainTitle}" alert:`, error);
   }
+}
+
+/** Sends the hot-lead email. Never throws — a failed alert must not lose the lead. */
+export async function sendHotLeadAlert(lead: HotLeadAlert): Promise<void> {
+  await sendAlertEmail({
+    title: "🔥 Hot lead",
+    name: lead.callerName || "Unknown caller",
+    course: lead.interestedCourse,
+    rows: [
+      ["Phone", lead.callerNumber],
+      ["Course", lead.interestedCourse],
+      ["Location", lead.location],
+      ["Callback time", lead.preferredCallbackTime],
+      ["Next step", lead.nextAction],
+      ["Calls so far", String(lead.callCount)],
+    ],
+    summary: lead.summary,
+    path: `/admin/leads/${lead.leadId}`,
+    linkLabel: "Open lead in the dashboard",
+  });
+}
+
+export interface CallbackRequestAlert {
+  name: string;
+  phone: string;
+  course: string;
+  city: string;
+  summary: string;
+}
+
+/** Emails the team when a WhatsApp student asks for a counsellor. Never throws. */
+export async function sendCallbackRequestAlert(request: CallbackRequestAlert): Promise<void> {
+  const digits = request.phone.replace(/\D/g, "").slice(-10);
+  await sendAlertEmail({
+    title: "🙋 WhatsApp callback request",
+    name: request.name || request.phone,
+    course: request.course,
+    rows: [
+      ["Phone", request.phone],
+      ["Course", request.course],
+      ["City", request.city],
+    ],
+    summary: request.summary,
+    path: `/admin/website-leads?q=${digits}`,
+    linkLabel: "Open in Website leads",
+  });
 }

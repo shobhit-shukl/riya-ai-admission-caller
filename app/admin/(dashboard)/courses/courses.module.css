@@ -1,0 +1,83 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.grid textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionHeading {
+  margin: 32px 0 12px;
+}
+
+.sectionHeading h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+  min-width: 160px;
+}
+
+.feesCell {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.removeButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.removeButton:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}

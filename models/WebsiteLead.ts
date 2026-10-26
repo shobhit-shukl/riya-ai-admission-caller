@@ -30,6 +30,8 @@ const WebsiteLeadSchema = new Schema(
     utmMedium: { type: String, default: "" },
     utmCampaign: { type: String, default: "" },
     submittedAt: { type: Date, required: true, index: true },
+    // WhatsApp chats: the student asked for a counsellor to contact them.
+    wantsCallback: { type: Boolean, default: false },
 
     status: { type: String, enum: WEBSITE_LEAD_STATUSES, default: "new", index: true },
     callAttempts: { type: Number, default: 0 },

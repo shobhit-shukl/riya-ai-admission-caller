@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/admin/leads", label: "Leads", icon: <LeadsIcon /> },
   { href: "/admin/website-leads", label: "Website leads", icon: <WebsiteLeadsIcon /> },
   { href: "/admin/contacts", label: "Call list", icon: <CallListIcon /> },
+  { href: "/admin/courses", label: "Courses", icon: <CoursesIcon /> },
   { href: "/admin/calling-setup", label: "Calling setup", icon: <SetupIcon /> },
 ];
 
@@ -113,6 +114,14 @@ function SetupIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
       <path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.7c0 .2.3.4.5.4h4c.2 0 .5-.2.5-.4l.4-2.7c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" />
+    </svg>
+  );
+}
+
+function CoursesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+      <path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3ZM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82Z" />
     </svg>
   );
 }
