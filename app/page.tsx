@@ -299,6 +299,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <span>Built with Next.js and the Vapi webhook API.</span>
         <div className={styles.footerLinks}>
+          <Link href="/privacy">Privacy</Link>
           <a
             href="https://docs.vapi.ai"
             target="_blank"
