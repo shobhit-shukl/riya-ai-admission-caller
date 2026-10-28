@@ -1,7 +1,7 @@
 /**
  * lib/outboundCalls.ts
  *
- * Starts outbound callbacks: the assistant (Sam/Riya) phones a lead back
+ * Starts outbound callbacks: the assistant (Sam) phones a lead back
  * through Vapi's REST API. When the call ends, Vapi sends the usual
  * end-of-call report to /api/vapi-webhook, which files it under the same
  * lead (matched by phone number) like any other call.
@@ -109,7 +109,7 @@ export function buildCallbackGreeting(lead: CallbackLead, trigger: CallbackTrigg
   }
 
   if (trigger === "test") {
-    return "Hello, this is Sam from Maya Devi University. This is a test call from the Riya admin panel. Talk to me as a student would, and the call will show up under Leads.";
+    return "Hello, this is Sam from Maya Devi University. This is a test call from the admin panel. Talk to me as a student would, and the call will show up under Leads.";
   }
 
   if (trigger === "website") {
@@ -236,12 +236,12 @@ interface VapiPhoneNumberInfo {
 }
 
 function webhookCheck(serverUrl: string): SetupCheck {
-  const label = "Call results reach Riya";
+  const label = "Call results reach the admin app";
   const url = serverUrl.replace(/\/+$/, "");
   const appUrl = process.env.APP_URL?.trim().replace(/\/+$/, "");
 
   if (!url) {
-    return { label, status: "fail", detail: "Sam has no Server URL, so finished calls never reach Riya. In Vapi → Assistants → Sam → Advanced → Webhook Server, set Server URL to …/api/vapi-webhook and publish." };
+    return { label, status: "fail", detail: "Sam has no Server URL, so finished calls never reach this app. In Vapi → Assistants → Sam → Advanced → Webhook Server, set Server URL to …/api/vapi-webhook and publish." };
   }
   if (!url.endsWith("/api/vapi-webhook")) {
     return { label, status: "fail", detail: `Sam's Server URL is ${url}. It should end in /api/vapi-webhook.` };
@@ -349,7 +349,7 @@ export async function checkCallingSetup(): Promise<SetupCheck[]> {
   checks.push(
     process.env.VAPI_WEBHOOK_SECRET?.trim()
       ? { label: "Webhook secret", status: "ok", detail: "VAPI_WEBHOOK_SECRET is set." }
-      : { label: "Webhook secret", status: "fail", detail: "VAPI_WEBHOOK_SECRET is missing, so Riya rejects every finished call." }
+      : { label: "Webhook secret", status: "fail", detail: "VAPI_WEBHOOK_SECRET is missing, so this app rejects every finished call." }
   );
 
   const autoOn = process.env.AUTO_CALLBACKS_ENABLED?.trim().toLowerCase() === "true";

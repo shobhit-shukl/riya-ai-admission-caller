@@ -6,7 +6,7 @@ const FEATURES = [
   {
     title: "Natural voice conversations",
     description:
-      "Riya talks with prospective students in real time over the phone, powered by Vapi's voice pipeline — no scripts, no hold music.",
+      "Sam talks with prospective students in real time over the phone, powered by Vapi's voice pipeline — no scripts, no hold music.",
     icon: (
       <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-2.07A7 7 0 0 0 19 12h-2Z" />
     ),
@@ -41,7 +41,7 @@ const STEPS = [
   {
     title: "A call comes in — or wraps up",
     description:
-      "A prospective student talks to Riya over the phone. When the call ends, Vapi sends an end-of-call-report webhook to your app.",
+      "A prospective student talks to Sam over the phone. When the call ends, Vapi sends an end-of-call-report webhook to your app.",
   },
   {
     title: "The webhook does the parsing",
@@ -87,7 +87,7 @@ export default function Home() {
       <header className={styles.header}>
         <a href="#top" className={styles.logo}>
           <span className={styles.logoDot} />
-          Riya
+          Sam
         </a>
         <nav className={styles.nav}>
           <a href="#demo">Demo</a>
@@ -115,7 +115,7 @@ export default function Home() {
           <div className={styles.heroText}>
             <span className={styles.badge}>Voice AI · Admissions</span>
             <h1 className={styles.heroTitle}>
-              Riya answers admission calls —{" "}
+              Sam answers admission calls —{" "}
               <span className={styles.heroAccent}>and logs every lead</span>{" "}
               automatically.
             </h1>
@@ -156,7 +156,7 @@ export default function Home() {
                   B.Tech CSE program and hostel fees.
                 </p>
                 <p className={styles.transcriptLine}>
-                  <strong>Riya:</strong> Sure! Let me walk you through the
+                  <strong>Sam:</strong> Sure! Let me walk you through the
                   intake and hostel options for this year...
                 </p>
               </div>
@@ -173,7 +173,7 @@ export default function Home() {
         <section id="demo" className={styles.section}>
           <div className={styles.sectionHeading} data-reveal>
             <span className={styles.eyebrow}>Demo</span>
-            <h2>See what Riya actually does</h2>
+            <h2>See what Sam actually does</h2>
             <p>
               A quick walkthrough of the project — the voice agent, the
               webhook, and where the data ends up.
@@ -195,7 +195,7 @@ export default function Home() {
             <span className={styles.eyebrow}>Features</span>
             <h2>Everything from ring to record, handled</h2>
             <p>
-              Riya sits between your phone line and your spreadsheet, so your
+              Sam sits between your phone line and your spreadsheet, so your
               team only ever sees finished, structured leads.
             </p>
           </div>
@@ -279,7 +279,7 @@ export default function Home() {
         </section>
 
         <section className={styles.ctaBanner} data-reveal>
-          <h2>Plug Riya into your own call flow</h2>
+          <h2>Plug Sam into your own call flow</h2>
           <p>
             Point a Vapi assistant&apos;s server URL at{" "}
             <code className={styles.code}>/api/vapi-webhook</code> and every

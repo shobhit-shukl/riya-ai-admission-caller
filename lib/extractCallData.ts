@@ -92,7 +92,7 @@ export async function extractCallData(
   }
 
   const modelName = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
-  const prompt = `You are reading a transcript of a phone call between an AI admissions counselor ("AI"/"Riya") and a prospective student ("User"). Read the call summary and transcript below and extract the requested fields.
+  const prompt = `You are reading a transcript of a phone call between an AI admissions counselor ("AI"/"Sam") and a prospective student ("User"). Read the call summary and transcript below and extract the requested fields.
 
 The transcript may be in Hindi (Devanagari script), English, romanized Hindi, or a mix of these switching mid-sentence — this is normal for Indian admissions calls. Understand all of them. Whatever field values you extract (name, location, course, etc.), write them out in Roman script / English so they're consistent and readable in a spreadsheet, even if the caller said them in Hindi. Convert spoken-out numbers and Hindi number words to digits (e.g. "पचहत्तर प्रतिशत" or "pachattar percent" -> "75%").
 

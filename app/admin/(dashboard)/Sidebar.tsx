@@ -29,7 +29,7 @@ export default function Sidebar({ adminEmail }: { adminEmail: string }) {
         <div className={styles.sidebarTop}>
           <Link href="/admin/analytics" className={styles.logo}>
             <span className={styles.logoDot} />
-            Riya Admin
+            Sam Admin
           </Link>
 
           <nav className={styles.nav}>
@@ -62,7 +62,7 @@ export default function Sidebar({ adminEmail }: { adminEmail: string }) {
       <div className={styles.mobileTopBar}>
         <Link href="/admin/analytics" className={styles.logo}>
           <span className={styles.logoDot} />
-          Riya Admin
+          Sam Admin
         </Link>
 
         <nav className={styles.mobileNav}>

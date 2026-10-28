@@ -68,7 +68,7 @@ interface VapiCall {
   startedAt?: string;
   endedAt?: string;
   cost?: number;
-  /** On calls Riya places: { leadId | contactId | websiteLeadId, trigger } (lib/outboundCalls.ts). */
+  /** On calls this app places: { leadId | contactId | websiteLeadId, trigger } (lib/outboundCalls.ts). */
   assistantOverrides?: { metadata?: Record<string, unknown> };
 }
 

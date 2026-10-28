@@ -6,7 +6,7 @@ import LeadDetail from "../LeadDetail";
 import styles from "../leads.module.css";
 
 export const metadata = {
-  title: "Lead detail — Riya Admin",
+  title: "Lead detail — Sam Admin",
 };
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
