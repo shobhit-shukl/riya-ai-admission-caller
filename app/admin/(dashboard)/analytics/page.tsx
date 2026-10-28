@@ -6,7 +6,7 @@ import dashboardStyles from "../dashboard.module.css";
 import styles from "./analytics.module.css";
 
 export const metadata = {
-  title: "Analytics — Riya Admin",
+  title: "Analytics — Sam Admin",
 };
 
 function formatCompact(value: number): string {
@@ -105,7 +105,7 @@ export default async function AnalyticsPage() {
     <div>
       <div className={dashboardStyles.pageHeading}>
         <h1>Analytics</h1>
-        <p>An overview of every lead Riya has logged.</p>
+        <p>An overview of every lead Sam has logged.</p>
       </div>
 
       <div className={styles.statGrid}>

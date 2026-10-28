@@ -8,7 +8,7 @@ import styles from "./courses.module.css";
 import RemoveCourseButton from "./RemoveCourseButton";
 
 export const metadata = {
-  title: "Courses — Riya Admin",
+  title: "Courses — Sam Admin",
 };
 
 export default async function CoursesPage() {

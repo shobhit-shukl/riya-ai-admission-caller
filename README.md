@@ -1,6 +1,6 @@
-# Riya — AI Admission Caller
+# Sam — AI Admission Caller
 
-Riya is an AI voice admissions counselor. She talks to prospective students on the phone (in Hindi, English or Hinglish), and after each call this app:
+Sam is an AI voice admissions counselor that talks to prospective students on the phone (in Hindi, English or Hinglish), and after each call this app:
 
 1. receives Vapi's end-of-call report on `/api/vapi-webhook`,
 2. reads the lead's details (name, course, marks, hostel, city, next step, hot/warm/cold) from the assistant's Vapi Structured Outputs, falling back to Gemini when none arrive,
@@ -12,7 +12,7 @@ Riya is an AI voice admissions counselor. She talks to prospective students on t
 8. collects **enquiries from the university website** into **Admin → Website leads** (see [Website leads](#website-leads)),
 9. runs a **WhatsApp bot** (n8n + WhatsApp Cloud API) that answers students from the courses and admission info managed in **Admin → Courses**, and saves interested students as leads (see [WhatsApp bot](#whatsapp-bot)).
 
-Riya's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
+Sam's voice, prompt and knowledge of the university are configured in the **Vapi dashboard**, not in this repo.
 
 ## Stack
 
@@ -60,7 +60,7 @@ The assistant can phone leads back: a **📞 Call now** button on each lead page
 It's built in but **dormant until configured** — until then the button says callbacks aren't set up. To turn it on:
 
 1. **Get a phone number that can call your students** and import it into Vapi (**Phone Numbers → Create Phone Number → Import Twilio**, or Telnyx, Vonage and other supported providers). Vapi's free numbers can only receive calls, so they can't be used for callbacks. With Twilio, also allow India under *Voice → Settings → Geo permissions*, or calls to +91 numbers are blocked.
-2. **In Vapi, open the number and, under Inbound Settings, choose Sam as the Assistant**, so students who call the number back reach Sam (their calls are filed as leads like any other). Calls Riya places use their own opening line ("Hello Priya, this is Sam… calling you back"). If Sam's prompt assumes the student called in, add a line such as *"Sometimes you are the one calling the student back; never thank them for calling in that case."*
+2. **In Vapi, open the number and, under Inbound Settings, choose Sam as the Assistant**, so students who call the number back reach Sam (their calls are filed as leads like any other). Calls this app places use their own opening line ("Hello Priya, this is Sam… calling you back"). If Sam's prompt assumes the student called in, add a line such as *"Sometimes you are the one calling the student back; never thank them for calling in that case."*
 3. **Collect three values from Vapi:**
    - **API Keys → Private key** (`VAPI_API_KEY`)
    - **Assistants → your assistant → ID** under its name (`VAPI_ASSISTANT_ID`)
@@ -70,7 +70,7 @@ It's built in but **dormant until configured** — until then the button says ca
 6. **Test it:** on the same page, enter your own mobile and press **Call my phone**. Talk to Sam, hang up, and the call appears under **Leads** a minute later.
 7. **(Optional) Automatic callbacks:** add `CRON_SECRET` (a long random string) and `AUTO_CALLBACKS_ENABLED=true`, then redeploy. Every Monday–Saturday around 11 AM IST, the job calls up to `CALLBACK_BATCH_LIMIT` leads whose follow-up date is today or earlier.
 
-**Unanswered calls.** When a call Riya places isn't answered (no answer, busy, voicemail), it stays in the lead's call history and the lead, Call list row or Website lead shows *Last call: No answer* (or *Line busy*, *Went to voicemail*). It doesn't create a lead, isn't added to the Google Sheet and doesn't run extraction.
+**Unanswered calls.** When a call this app places isn't answered (no answer, busy, voicemail), it stays in the lead's call history and the lead, Call list row or Website lead shows *Last call: No answer* (or *Line busy*, *Went to voicemail*). It doesn't create a lead, isn't added to the Google Sheet and doesn't run extraction.
 
 Rules the automatic job follows:
 - Only within `CALLBACK_HOURS` (IST, default 10–19), Monday–Saturday.

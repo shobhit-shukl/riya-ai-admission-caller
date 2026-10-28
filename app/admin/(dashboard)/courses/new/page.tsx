@@ -4,7 +4,7 @@ import leadStyles from "../../leads/leads.module.css";
 import CourseForm from "../CourseForm";
 
 export const metadata = {
-  title: "Add course — Riya Admin",
+  title: "Add course — Sam Admin",
 };
 
 export default function NewCoursePage() {

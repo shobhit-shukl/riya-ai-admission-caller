@@ -10,7 +10,7 @@ import styles from "./contacts.module.css";
 import UploadContactsForm from "./UploadContactsForm";
 
 export const metadata = {
-  title: "Call list — Riya Admin",
+  title: "Call list — Sam Admin",
 };
 
 const STATUS_LABELS: Record<ContactStatus, string> = {

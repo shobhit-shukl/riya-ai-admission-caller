@@ -21,7 +21,7 @@ import { CallButton, StatusSelect } from "./WebsiteLeadRowActions";
 import styles from "./website-leads.module.css";
 
 export const metadata = {
-  title: "Website leads — Riya Admin",
+  title: "Website leads — Sam Admin",
 };
 
 type Params = Record<string, string | string[] | undefined>;

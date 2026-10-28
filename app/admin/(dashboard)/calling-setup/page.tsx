@@ -5,7 +5,7 @@ import styles from "./calling-setup.module.css";
 import TestCallForm from "./TestCallForm";
 
 export const metadata = {
-  title: "Calling setup — Riya Admin",
+  title: "Calling setup — Sam Admin",
 };
 
 const ICONS: Record<SetupCheckStatus, string> = { ok: "✓", warn: "!", fail: "✕", info: "i" };

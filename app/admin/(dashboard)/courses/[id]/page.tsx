@@ -6,7 +6,7 @@ import leadStyles from "../../leads/leads.module.css";
 import CourseForm from "../CourseForm";
 
 export const metadata = {
-  title: "Edit course — Riya Admin",
+  title: "Edit course — Sam Admin",
 };
 
 export default async function EditCoursePage({ params }: { params: Promise<{ id: string }> }) {

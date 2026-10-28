@@ -13,7 +13,7 @@ import styles from "./leads.module.css";
 import LeadsTable from "./LeadsTable";
 
 export const metadata = {
-  title: "Leads — Riya Admin",
+  title: "Leads — Sam Admin",
 };
 
 function buildPageHref(filters: LeadFilters, page: number): string {

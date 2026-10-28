@@ -3,9 +3,9 @@ import Link from "next/link";
 import styles from "./privacy.module.css";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Riya Admissions",
+  title: "Privacy Policy — Sam Admissions",
   description:
-    "How the Riya admissions assistant collects and uses information from students who contact us by WhatsApp, phone or the website.",
+    "How the Sam admissions assistant collects and uses information from students who contact us by WhatsApp, phone or the website.",
 };
 
 const CONTACT_EMAIL = "shobhitshukl2006@gmail.com";
@@ -16,14 +16,14 @@ export default function PrivacyPage() {
     <div className={styles.page}>
       <main className={styles.main}>
         <Link href="/" className={styles.back}>
-          ← Riya Admissions
+          ← Sam Admissions
         </Link>
 
         <h1>Privacy Policy</h1>
         <p className={styles.updated}>Last updated: {LAST_UPDATED}</p>
 
         <p>
-          Riya is the admissions assistant used by Maya Devi University, Dehradun (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
+          Sam is the admissions assistant used by Maya Devi University, Dehradun (&ldquo;we&rdquo;, &ldquo;us&rdquo;)
           to answer questions from prospective students and their families on WhatsApp, over the phone and through
           our website. This policy explains what information we collect when you contact us, how we use it and the
           choices you have.

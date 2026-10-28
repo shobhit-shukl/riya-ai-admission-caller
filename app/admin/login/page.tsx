@@ -5,7 +5,7 @@ import LoginForm from "./LoginForm";
 import styles from "./login.module.css";
 
 export const metadata = {
-  title: "Admin Sign In — Riya",
+  title: "Admin Sign In — Sam",
 };
 
 export default async function AdminLoginPage() {
@@ -21,7 +21,7 @@ export default async function AdminLoginPage() {
       <div className={styles.card}>
         <div className={styles.logo}>
           <span className={styles.logoDot} />
-          Riya Admin
+          Sam Admin
         </div>
         <h1>Sign in</h1>
         <p className={styles.subtitle}>Access the leads dashboard.</p>
